@@ -1,0 +1,16 @@
+# This is the Snakemake configuration file that specifies paths and 
+# and options for the pipeline. Anybody wishing to use
+# the provided snakemake pipeline should first fill out this file with paths to
+# their own data, as the Snakefile requires it.
+# Note: this file is written in the YAML syntax (https://learnxinyminutes.com/docs/yaml/)
+
+
+# The path to a text file specifying where to find read information for each sample
+# Each row in the sample file should represent a different sample.
+# The sample file should have 2 columns (each separated by a single tab):
+#       <unique_sample_name> <path_to_images>
+sample_file: data/samples.tsv
+
+# The path to the directory in which to place all of the output files
+# defined relative to whatever directory you execute the snakemake command in
+out: out
