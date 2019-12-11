@@ -1,4 +1,4 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-≥5.5.0-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥5.8.0-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
 [![License](https://img.shields.io/apm/l/vim-mode.svg)](LICENSE)
 
 # flower_map
