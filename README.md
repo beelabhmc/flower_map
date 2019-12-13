@@ -27,10 +27,10 @@ We highly recommend you install [Snakemake via conda](https://snakemake.readthed
 # files and directories
 
 ### [Snakefile](Snakefile)
-A [Snakefile](https://snakemake.readthedocs.io/en/stable/) for running the entire pipeleine. It uses overlapping drone imagery to create a map of the species of flowers surrounding a bee colony.
+A [Snakefile](https://snakemake.readthedocs.io/en/stable/) for running the entire pipeline. It uses overlapping drone imagery to create a map of the species of flowers surrounding a bee colony.
 
 ### [config.yml](config.yml)
-Config files that define options and input for the pipeline. You should start by filling this out.
+A config file that define options and input for the pipeline. You should start by filling this out.
 
 ### [scripts/](scripts)
 Various scripts used by the pipeline. See the [script README](scripts/README.md) for more information.

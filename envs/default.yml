@@ -2,7 +2,7 @@ channels:
   - anaconda
   - nodefaults
 dependencies:
-  -python=3
+  - python=3
   - pip
   - pip:
     - http://download.agisoft.com/Metashape-1.5.5-cp35.cp36.cp37-abi3-linux_x86_64.whl
