@@ -18,3 +18,23 @@ rule stitch:
     conda: "envs/default.yml"
     shell:
         "scripts/stitch.py {input} {output}"
+
+rule export_ortho:
+    """ extract an orthomosaic image from the project file """
+    input:
+        config['out']+"/{sample}/{step}/stitched.psx"
+    output:
+        config['out']+"/{sample}/{step}/ortho.tiff"
+    conda: "envs/default.yml"
+    shell:
+        "scripts/export_ortho.py {input} {output}"
+
+rule segment:
+    """ segment plants from an image """
+    input:
+        config['out']+"/{sample}/{step}/ortho.tiff"
+    output:
+        config['out']+"/{sample}/segment/segmented.pickle"
+    conda: "envs/default.yml"
+    shell:
+        "scripts/segment.py {input} {output}"
