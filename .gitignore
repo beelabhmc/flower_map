@@ -2,3 +2,4 @@ out/
 data/
 metashape.lic
 .snakemake/
+__pycache__/
