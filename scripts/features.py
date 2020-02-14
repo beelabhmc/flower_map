@@ -2,17 +2,18 @@
 import cv2
 import numpy as np
 from colorsys import *
-from PIL import ImageStat
+import matplotlib as mpl
 from scipy.stats import skew
 from sklearn import preprocessing
 from skimage import filters, color
+from PIL import Image, ImageStat, ImageFilter
 from skimage.feature import greycomatrix, greycoprops
 
 
 def colorAvg(im, mask):
     """Takes in a string containing an image file name, returns the average red, blue, and green
         values for all the pixels in that image."""
-    imStats = ImageStat.Stat(im)
+    imStats = ImageStat.Stat(im, mask)
     (redAv, greenAv, blueAv) = imStats.mean
     return redAv, greenAv, blueAv
 
@@ -23,17 +24,19 @@ def colorVariance(im, mask):
     # load image pixels
     pix = im.load()
     width, height = im.size
+    mask_arr = np.asarray(mask)
 
     # create empty histogram to be filled with frequencies
     histogram = [0]*360
     pixelHue = 0
     for i in range(width):
         for j in range(height):
-            (r,g,b) = pix[i,j] #pull out the current r,g,b values
-            (h,s,v) = rgb_to_hsv(r/255.,g/255.,b/255.)
-            pixelHue = int(360*h)
-            #build histogram
-            histogram[pixelHue] += 1
+            if mask_arr[i,j]:
+                (r,g,b) = pix[i,j] #pull out the current r,g,b values
+                (h,s,v) = rgb_to_hsv(r/255.,g/255.,b/255.)
+                pixelHue = int(360*h)
+                #build histogram
+                histogram[pixelHue] += 1
     #print histogram
     # calculate standard deviation of histogram
     return np.std(histogram)
@@ -48,13 +51,14 @@ def countEdgePixels(im, mask):
     # open image and filter
     im2 = im.filter(ImageFilter.FIND_EDGES)
     im2 = im2.convert("L")
+    mask_arr = np.asarray(mask)
 
     # load pixels and count edge pixels
     pix = im2.load()
     pixels = 0
     for x in range(0,im.size[0]):
         for y in range(0, im.size[1]):
-            if pix[x,y] > threshold:
+            if pix[x,y] > threshold and mask_arr[i,j]:
                 pixels += 1
 
     return float(pixels) / (im.size[0]*im.size[1])
@@ -111,9 +115,10 @@ def yellowFast(im, mask):
     width, height = im.size  #find the size of the image
     count = 0 #initialize a counter for yellow pixels.
     rgbList = list(im.getdata())
-    hsvList = map(getHSV, rgbList)
-    for (h,s,v) in hsvList:
-        if minHue <h and h<maxHue and minSat<s and minV<v:
+    maskList = list(mask.getdata())
+    hsvList = map(hsv, rgbList)
+    for i, (h,s,v) in zip(maskList, hsvList):
+        if i and minHue <h and h<maxHue and minSat<s and minV<v:
             count += 1
     totalPix = width*height
     portion = float(count)/totalPix
@@ -157,7 +162,7 @@ def colorMoment(im, mask):
     #the red, green, and blue channels, so this is not included here.
     #Only the 2nd and 3rd moments will be calculated here.
 
-    newIm = matplotlib.colors.rgb_to_hsv(im) #convert to HSV space
+    newIm = mpl.colors.rgb_to_hsv(im) #convert to HSV space
 
     #Pull out each channel from the image to analyze seperately.
     HChannel = newIm[:,:,0]

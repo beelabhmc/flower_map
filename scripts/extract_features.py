@@ -59,20 +59,25 @@ for i in range(len(labels)):
         [tuple(label) for label in labels[i]],
         outline=1, fill=1
     )
-    mask = np.array(mask)
-    # use the boolean mask to extract only those pixels of the img
-    # assemble new image (uint8: 0-255)
-    new_img_array = np.empty(img_array.shape,dtype='uint8')
-    # colors (three first columns, RGB)
-    new_img_array[:,:,:3] = img_array[:,:,:3]
-    # filtering image by mask
-    new_img_array[:,:,0] = new_img_array[:,:,0] * mask
-    new_img_array[:,:,1] = new_img_array[:,:,1] * mask
-    new_img_array[:,:,2] = new_img_array[:,:,2] * mask
-    new_img = Image.fromarray(new_img_array, "RGB")
+
+    # bool_mask = np.array(mask)
+    # # use the boolean mask to extract only those pixels of the img
+    # # assemble new image (uint8: 0-255)
+    # new_img_array = np.empty(img_array.shape,dtype='uint8')
+    # # colors (three first columns, RGB)
+    # new_img_array[:,:,:3] = img_array[:,:,:3]
+    # # filtering image by mask
+    # new_img_array[:,:,0] = new_img_array[:,:,0] * bool_mask
+    # new_img_array[:,:,1] = new_img_array[:,:,1] * bool_mask
+    # new_img_array[:,:,2] = new_img_array[:,:,2] * bool_mask
+    # new_img = Image.fromarray(new_img_array, "RGB")
+
+    # crop out only the bounding rectangle surrounding the polygon
+    new_img = img.crop(mask.getbbox())
+    new_mask = mask.crop(mask.getbbox())
 
     # calculate the features and store them in the np array
-    out[i,:] = metrics(new_img, mask)
+    out[i,:] = metrics(new_img, new_mask)
 
 # write the output to the tsv file
 np.savetxt(args.out, out, fmt='%f', delimiter="\t")
