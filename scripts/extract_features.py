@@ -17,6 +17,8 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+NUM_FEATURES = 19
+
 # if the data is from labelme, import it using the labelme importer
 if args.labels.endswith('.json'):
     import import_labelme
@@ -26,12 +28,11 @@ else:
     raise Exception('label format not supported yet')
 
 # load the image
-print('loading image...')
 img = Image.open(args.img).convert("RGB")
 img_array = np.asarray(img)
 
 # initialize a np array to store the output data
-out = np.empty((len(labels), 19))
+out = np.empty((len(labels), NUM_FEATURES))
 
 def metrics(img, mask):
     """
@@ -49,9 +50,7 @@ def metrics(img, mask):
     metrics = [avg[0], avg[1], avg[2], yellow, var, edges, texture, contrast, dissim, homog, energy, corr, ASM, Hstd, Sstd, Vstd, Hskew, Sskew, Vskew]
     return metrics
 
-# for each segmented region:
-for i in range(len(labels)):
-
+def processLabel(label):
     # calculate a boolean mask of the region contained within the provided contour
     # mask = np.zeros((img.shape[0], img.shape[1])
     mask = Image.new('L', (img_array.shape[1], img_array.shape[0]), 0)
@@ -79,6 +78,12 @@ for i in range(len(labels)):
     # calculate the features and store them in the np array
     out[i,:] = metrics(new_img, new_mask)
 
+# for each segmented region:
+# TODO: parallelize these steps somehow? one potential complication: the output needs to remain in the same order as the labels
+for i in range(len(labels)):
+    processLabel(labels[i])
+
 # write the output to the tsv file
-np.savetxt(args.out, out, fmt='%f', delimiter="\t")
-# np.savetxt(args.out, out, fmt='%f', delimiter="\t", header=)
+np.savetxt(args.out, out, fmt='%f', delimiter="\t", comments='',
+    header="\t".join(["redAvg", "greenAvg", "blueAvg", "yellow", "variance", "edges", "texture", "contrast", "dissim", "homog", "energy", "corr", "ASM", "Hstd", "Sstd", "Vstd", "Hskew", "Sskew", "Vskew"])
+)

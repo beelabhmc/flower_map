@@ -10,6 +10,7 @@ from PIL import Image, ImageStat, ImageFilter
 from skimage.feature import greycomatrix, greycoprops
 
 
+
 def colorAvg(im, mask):
     """Takes in a string containing an image file name, returns the average red, blue, and green
         values for all the pixels in that image."""
@@ -31,7 +32,7 @@ def colorVariance(im, mask):
     pixelHue = 0
     for i in range(width):
         for j in range(height):
-            if mask_arr[i,j]:
+            if mask_arr[j,i]:
                 (r,g,b) = pix[i,j] #pull out the current r,g,b values
                 (h,s,v) = rgb_to_hsv(r/255.,g/255.,b/255.)
                 pixelHue = int(360*h)
@@ -58,7 +59,7 @@ def countEdgePixels(im, mask):
     pixels = 0
     for x in range(0,im.size[0]):
         for y in range(0, im.size[1]):
-            if pix[x,y] > threshold and mask_arr[i,j]:
+            if pix[x,y] > threshold and mask_arr[y,x]:
                 pixels += 1
 
     return float(pixels) / (im.size[0]*im.size[1])
@@ -132,7 +133,7 @@ def glcm(im, mask):
     """Calculate the grey level co-occurrence matrices and output values for
     contrast, dissimilarity, homogeneity, energy, correlation, and ASM in a list"""
 
-    newIm = im.convert('L') #Conver to a grey scale image
+    newIm = np.array(im.convert('L')) #Conver to a grey scale image
     glcm = greycomatrix(newIm, [5], [0]) #calcualte the glcm
 
     #Compute all of the grey co occurrence features.
