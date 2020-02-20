@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-import cv2
 import argparse
-import features
-import numpy as np
-from PIL import Image, ImageDraw
 
 parser = argparse.ArgumentParser(description='Extract the features of each segmented region.')
 parser.add_argument(
@@ -16,6 +12,12 @@ parser.add_argument(
     "out", help="a TSV containing the features (as columns) of each segmented regions (as rows)"
 )
 args = parser.parse_args()
+
+import cv2
+import features
+import numpy as np
+from PIL import Image, ImageDraw
+
 
 NUM_FEATURES = 19
 
