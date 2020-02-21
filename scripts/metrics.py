@@ -13,6 +13,9 @@ parser.add_argument(
     default=sys.stdout, help="the filename to save the data to"
 )
 parser.add_argument(
+    "-n", "--names", action='store_true', help="whether to also output the names of each metric"
+)
+parser.add_argument(
     "-m", "--metrics", default='r,p,b,t,f,a,v', help=(
         "a comma separated, ordered list of metrics to output; use 'r' for "
         "recall, 'p' for precision, 'b' for the F-beta score, 't' for total "
@@ -20,6 +23,8 @@ parser.add_argument(
         "the avg precision score"
     )
 )
+to_idx = {'p': 0, 'r': 1, 'b': 2, 'f': 4, 't': 5, 'a': 6, 'v': 7}
+metric_names = {'p': "Precision", 'r':"Recall", 'b': "F-beta", 'f': "Total Positives", 't': "Total Negatives", 'a': "AUROC", 'v': "Average Precision"}
 parser.add_argument(
     "-p", "--ignore-probs", action='store_true', help="whether to only read truth and predict columns and ignore a probs column if it is provided; note that the AUROC and avg precision will not be output"
 )
@@ -74,11 +79,16 @@ if not args.ignore_probs:
     )
 
 # which metrics should we return?
-to_idx = {'p': 0, 'r': 1, 'b': 2, 'f': 4, 't': 5, 'a': 6, 'v': 7}
 metrics = [
     to_idx[metric]
     for metric in args.metrics.split(",")
     if not args.ignore_probs or metric not in {'a', 'v'}
 ]
 
-np.savetxt(args.out, scores[metrics], fmt='%f')
+# format results
+result = scores[metrics]
+if args.names:
+    metric_names = [metric_names[metric] for metric in args.metrics.split(",")]
+    result = np.array([metric_names, result]).T
+
+np.savetxt(args.out, result, delimiter="\t", fmt='%s')
