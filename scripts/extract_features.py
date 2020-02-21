@@ -13,7 +13,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-import cv2
 import features
 import numpy as np
 from PIL import Image, ImageDraw
