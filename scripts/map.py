@@ -45,6 +45,6 @@ for i in range(len(labels)):
             predicts.iloc[i]["prob."+str(class_label)],
         )
     ]
-    cv.drawContours(img, labels, i, color, 5)
+    cv.drawContours(img, labels, i, color, 7)
 
 cv.imwrite(args.out, img)
