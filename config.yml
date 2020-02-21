@@ -11,6 +11,22 @@
 #       <unique_sample_name> <path_to_images>
 sample_file: data/samples.tsv
 
+# Whether to perform strategy 1 or strategy 2
+# Strategy 1 performs segmentation on the stitched orthomosaic, while Strategy 2
+# parallelizes the segmentation step by running it on each of the original images
+# If this option is set to false or commented out, strategy 1 will be used
+parallel: false
+
+# Whether to tune the hyparameters of the classifier when traning it
+# Enabling this option will significantly increase the running time of the pipeline
+tune: false
+
+# The beta value used for calculating the F-beta score
+# If you choose beta such that 0 < beta < 1, the classifier will have more
+# false negatives and if you choose beta such that beta > 1, the classifier
+# will have more false positives
+beta: 1
+
 # The path to the directory in which to place all of the output files
 # defined relative to whatever directory you execute the snakemake command in
 out: out
