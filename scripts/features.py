@@ -129,33 +129,31 @@ def hsv(colors):
     r,g,b=colors
     return rgb_to_hsv(r/255., g/255., b/255.)
 
-def glcm(im, mask):
+def glcm(im, mask=None, offset=None, features=['contrast', 'dissimilarity', 'homogeneity', 'energy', 'correlation', 'ASM']):
     """Calculate the grey level co-occurrence matrices and output values for
     contrast, dissimilarity, homogeneity, energy, correlation, and ASM in a list"""
 
-    newIm = np.array(im.convert('L')) #Conver to a grey scale image
-    glcm = greycomatrix(newIm, [5], [0]) #calcualte the glcm
+    newIm = im
+    if not isinstance(im, np.ndarray):
+        newIm = np.array(im.convert('L')) #Convert to a grey scale image
+    # TODO: check if you want the offset to be a list or just a single value
+    if offset is None:
+        # we assume the pixel of interest is in the center of the rectangular image
+        # and calculate the offset as half of the radius (or 1/4th of the diameter)
+        offset = [int(s/4) for s in newIm.shape[::-1]] * 2
+    elif type(offset) == int:
+        offset = [offset] * 4
+    # calculate the glcm and then average over all 4 angles
+    glcm = np.mean(greycomatrix(newIm, offset, [0, np.pi/4, np.pi/2, 3*np.pi/4]), axis=(-1, -2), keepdims=True)
 
-    #Compute all of the grey co occurrence features.
-    contrast = greycoprops(glcm, 'contrast')[0][0]
-    if np.isnan(contrast): #Make sure that no value is recorded as NAN.
-        contrast = 0 #if it is replace with 0.
-    dissim = greycoprops(glcm, 'dissimilarity')[0][0]
-    if np.isnan(dissim):
-        dissim = 0
-    homog = greycoprops(glcm, 'homogeneity')[0][0]
-    if np.isnan(homog):
-        homog = 0
-    energy = greycoprops(glcm, 'energy')[0][0]
-    if np.isnan(energy):
-        energy = 0
-    corr = greycoprops(glcm, 'correlation')[0][0]
-    if np.isnan(corr):
-        corr = 0
-    ASM = greycoprops(glcm, 'ASM')[0][0]
-    if np.isnan(ASM):
-        ASM = 0
-    return np.concatenate(([contrast], [dissim], [homog], [energy], [corr], [ASM]), 0) #concatenate into one list along axis 0 and return
+    returns = []
+    for feature in features:
+        #Compute all of the grey co occurrence features.
+        metric = greycoprops(glcm, feature)[0][0]
+        if np.isnan(metric):
+            metric = 0
+        returns.append([metric])
+    return np.concatenate(tuple(returns), 0) #concatenate into one list along axis 0 and return
 
 def colorMoment(im, mask):
     """Calculates the 2nd and 3rd color moments of the input image and returns values in a list."""
