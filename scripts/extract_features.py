@@ -6,7 +6,7 @@ parser.add_argument(
     "img", help="the path to the original image from which the segmented regions came"
 )
 parser.add_argument(
-    "labels", help="the path to the file containing the coordinates of the polygon of each segmented region"
+    "labels", help="the path to the file containing the coordinates of each segmented region"
 )
 parser.add_argument(
     "out", help="a TSV containing the features (as columns) of each segmented regions (as rows)"
@@ -20,20 +20,10 @@ from PIL import Image, ImageDraw
 
 NUM_FEATURES = 19
 
-# if the data is from labelme, import it using the labelme importer
-if args.labels.endswith('.json'):
-    import import_labelme
-    # labels = [np.array(label, dtype=np.int32) for label in labels]
-    labels = import_labelme.main(args.labels)
-else:
-    raise Exception('label format not supported yet')
 
 # load the image
 img = Image.open(args.img).convert("RGB")
 img_array = np.asarray(img)
-
-# initialize a np array to store the output data
-out = np.empty((len(labels), NUM_FEATURES))
 
 def metrics(img, mask):
     """
@@ -79,10 +69,39 @@ def processLabel(label):
     # calculate the features and store them in the np array
     out[i,:] = metrics(new_img, new_mask)
 
-# for each segmented region:
-# TODO: parallelize these steps somehow? one potential complication: the output needs to remain in the same order as the labels
-for i in range(len(labels)):
-    processLabel(labels[i])
+def processMarkers(markers):
+    # first, get the marker IDs (ie 0, 1, 2, ...)
+    marker_ids = np.unique(markers)
+    # next, ignore the marker id for the background (ie 0)
+    marker_ids = marker_ids[marker_ids != 0]
+    # create a np array to store the results of the feature calculation step
+    out = np.empty((len(marker_ids), NUM_FEATURES))
+    # extract boolean masks of the regions corresponding with each marker
+    for i in range(len(marker_ids)):
+        marker = marker_ids[i]
+        mask = Image.fromarray(markers == marker)
+        mask_box = mask.getbbox()
+        # crop out only the bounding rectangle surrounding the polygon
+        new_img = img.crop(mask_box)
+        new_mask = mask.crop(mask_box)
+        out[i,:] = metrics(new_img, new_mask)
+    return out
+
+# if the data is from labelme, import it using the labelme importer
+if args.labels.endswith('.json'):
+    import import_labelme
+    # labels = [np.array(label, dtype=np.int32) for label in labels]
+    labels = import_labelme.main(args.labels)
+    out = np.empty((len(labels), NUM_FEATURES))
+    # for each segmented region:
+    # TODO: parallelize these steps somehow? one potential complication: the output needs to remain in the same order as the labels
+    for i in range(len(labels)):
+        processLabel(labels[i])
+elif args.labels.endswith('.npy'):
+    markers = np.load(args.labels)
+    out = processMarkers(markers)
+else:
+    raise Exception('label format not supported yet')
 
 # write the output to the tsv file
 np.savetxt(args.out, out, fmt='%f', delimiter="\t", comments='',
