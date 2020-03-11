@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 # open the metashape document
 doc = Metashape.Document()
-doc.open(args.project_file)
+doc.open(args.project_file, read_only=True)
 
 # find the correct chunk
 for chunk in doc.chunks:
