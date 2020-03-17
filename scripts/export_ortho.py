@@ -8,7 +8,7 @@ parser.add_argument(
     help="a path to a metashape project file (w/ a psx file ending)"
 )
 parser.add_argument(
-    "orthomosaic_out", help="the stitched orthomosaic"
+    "out", help="the stitched orthomosaic"
 )
 args = parser.parse_args()
 
@@ -22,4 +22,4 @@ for chunk in doc.chunks:
         break
 
 # export the orthomosaic
-chunk.exportOrthomosaic(args.orthomosaic_out)
+chunk.exportOrthomosaic(args.out)
