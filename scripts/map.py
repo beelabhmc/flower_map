@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 
-parser = argparse.ArgumentParser(description='Stitch the drone imagery together.')
+parser = argparse.ArgumentParser(description='Map the segments (and optionally their predicted class labels) back onto an image.')
 parser.add_argument(
-    "ortho", help="the path to the stitched orthomosaic"
+    "img", help="the path to the image upon which to create the map"
 )
 parser.add_argument(
     "labels", help="the path to the file containing the coordinates of each segmented region"
 )
 parser.add_argument(
-    "out", help="a map of the flowering species in the stitched orthomosaic"
+    "out", help="a map of the flowering species in the image"
 )
 parser.add_argument(
     "predicts", nargs="?", const=None, help="the path to the file containing the true and predicted class labels"
@@ -31,7 +31,7 @@ if args.predicts is not None:
 else:
     predicts = None
 
-img = cv.imread(args.ortho)
+img = cv.imread(args.img)
 # add alpha channel (ie transparency)
 img = cv.cvtColor(img, cv.COLOR_RGB2RGBA)
 
@@ -54,7 +54,7 @@ def get_color(predicts, i, unique = False):
 # if the data is from labelme, import it using the labelme importer
 if args.labels.endswith('.json'):
     import import_labelme
-    labels = [np.array(label).astype(np.int32) for label in import_labelme.main(args.labels)]
+    labels = [np.array(label).astype(np.int32) for label in import_labelme.main(args.labels, False, img.shape[-2::-1])]
     # draw each label onto the img
     for i in range(len(labels)):
         cv.drawContours(img, labels, i, get_color(predicts, i), 7)

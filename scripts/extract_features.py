@@ -85,18 +85,23 @@ def processMarkers(markers):
         new_img = img.crop(mask_box)
         new_mask = mask.crop(mask_box)
         out[i,:] = metrics(new_img, new_mask)
-    return out
+    return np.hstack((marker_ids[:, np.newaxis], out))
 
 # if the data is from labelme, import it using the labelme importer
 if args.labels.endswith('.json'):
     import import_labelme
     # labels = [np.array(label, dtype=np.int32) for label in labels]
-    labels = import_labelme.main(args.labels)
+    labels = import_labelme.main(args.labels, True, img_array.shape[-2::-1])
+    label_keys = sorted(labels.keys())
+    # make sure the segments are in sorted order, according to the keys
+    labels = [labels[i] for i in label_keys]
     out = np.empty((len(labels), NUM_FEATURES))
     # for each segmented region:
     # TODO: parallelize these steps somehow? one potential complication: the output needs to remain in the same order as the labels
     for i in range(len(labels)):
         processLabel(labels[i])
+    # add the keys
+    out = np.hstack((np.array(label_keys)[:, np.newaxis], out))
 elif args.labels.endswith('.npy'):
     markers = np.load(args.labels)
     out = processMarkers(markers)
@@ -105,5 +110,5 @@ else:
 
 # write the output to the tsv file
 np.savetxt(args.out, out, fmt='%f', delimiter="\t", comments='',
-    header="\t".join(["redAvg", "greenAvg", "blueAvg", "yellow", "variance", "edges", "texture", "contrast", "dissim", "homog", "energy", "corr", "ASM", "Hstd", "Sstd", "Vstd", "Hskew", "Sskew", "Vskew"])
+    header="\t".join(["label", "redAvg", "greenAvg", "blueAvg", "yellow", "variance", "edges", "texture", "contrast", "dissim", "homog", "energy", "corr", "ASM", "Hstd", "Sstd", "Vstd", "Hskew", "Sskew", "Vskew"])
 )

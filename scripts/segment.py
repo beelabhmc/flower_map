@@ -8,7 +8,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "out", type=argparse.FileType('w', encoding='UTF-8'),
-    help="the path to an npy file in which to store the coordinates of each extracted object"
+    help="the path to a file in which to store the coordinates of each extracted object"
 )
 args = parser.parse_args()
 
@@ -108,12 +108,31 @@ markers = cv.watershed(img,markers)
 # print('finding polygons')
 markers[markers == -1] = 1
 markers -= 1
-# thresh3 = cv.convertScaleAbs(markers)
-# contours, _ = cv.findContours(thresh3, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-# polys = []
-# for cont in contours:
-#     approx_curve = cv.approxPolyDP(cont, 3, False)
-#     polys.append(approx_curve)
 
-# cv.drawContours(img, polys, -1, (0, 255, 0), thickness=5, lineType=8)
-np.save(args.out.name, markers)
+# should we save the segments as a mask or as bounding boxes?
+if args.out.name.endswith('.npy'):
+    np.save(args.out.name, markers)
+elif args.out.name.endswith('.json'):
+    # import extra required modules
+    import json
+    from imantics import Mask
+    # create json structure
+    cam_segments = {
+        'flags': {},
+        'shapes': [
+            {
+                'label': int(i),
+                'line_color': None,
+                'fill_color': None,
+                'points': Mask(markers == i).polygons().points[0].tolist(),
+                'shape_type': "polygon",
+                'flags': {}
+            }
+            for i in filter(lambda x: x, np.unique(markers))
+        ]
+    }
+    # write the json to a file
+    with open(args.out.name, 'w') as out:
+        json.dump(cam_segments, out)
+else:
+    sys.exit("Unsupported output file format.")

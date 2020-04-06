@@ -23,7 +23,12 @@ library(parallel)
 
 # load data.frame
 print("loading training data into R")
-training<- read.table(training, header=TRUE, sep="\t", na.strings=c("NA",".","na","N/A"), skipNul=FALSE, row.names=NULL)
+training_temp<- read.table(training, header=TRUE, sep="\t", na.strings=c("NA",".","na","N/A"), skipNul=FALSE, row.names=NULL, nrow=1)
+if (names(training_temp)[1] == "label") {
+	training<- read.table(training, header=TRUE, sep="\t", na.strings=c("NA",".","na","N/A"), skipNul=FALSE, row.names=1)
+} else {
+	training<- read.table(training, header=TRUE, sep="\t", na.strings=c("NA",".","na","N/A"), skipNul=FALSE, row.names=NULL)
+}
 
 print("creating training task and making RF learner")
 
