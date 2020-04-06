@@ -6,7 +6,7 @@ A pipeline for generating maps of the species of flowers around a bee colony fro
 
 
 # download
-Execute the following commands or download the [latest release](https://github.com/aryam7/varCA/releases/latest) manually.
+Execute the following commands or download the [latest release](https://github.com/beelabhmc/flower_map/releases/latest) manually.
 ```
 wget -O- -q https://github.com/beelabhmc/flower_map/tarball/master | tar mxvzf -
 mv beelabhmc-* flower_map
