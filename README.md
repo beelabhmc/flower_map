@@ -14,9 +14,14 @@ mv beelabhmc-* flower_map
 
 # execution
 ```
-conda install -c bioconda -c conda-forge -n snakemake 'snakemake>=5.8.0'  # install snakemake via conda (if not already installed)
-conda activate snakemake                                                  # activate the conda env
-./run.bash                                                                # execute the pipeline
+# install snakemake via conda (if not already installed)
+conda create -c bioconda -c conda-forge -n snakemake 'snakemake>=5.8.0'
+
+# activate the conda env
+conda activate snakemake
+
+# execute the pipeline
+./run.bash
 ```
 
 The pipeline is written as a Snakefile, so it must be executed via [Snakemake](https://snakemake.readthedocs.io/en/stable/). See the [`run.bash` script](run.bash) for an example. Make sure to provide required input and options in the [config file](config.yml) before executing.
