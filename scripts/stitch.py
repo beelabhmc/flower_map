@@ -63,7 +63,7 @@ Tie_Limit = 0
 # Variables for building dense cloud
 # Quality: UltraQuality, HighQuality, MediumQuality, LowQuality, LowestQuality
 # Filter: AggressiveFiltering, ModerateFiltering, MildFiltering, NoFiltering
-Quality = PhotoScan.Quality.HighQuality
+Quality = PhotoScan.Quality.UltraQuality
 FilterMode = PhotoScan.FilterMode.MildFiltering
 #
 # Variables for dense cloud ground point classification
