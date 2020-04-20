@@ -6,6 +6,10 @@ min_version("5.8.0")
 configfile: "config.yml"
 
 
+def check_config(value):
+    """ return true if config value exists and is true """
+    return value in config and config[value]
+
 def read_samples():
     """Function to get names and paths from a sample file
     specified in the configuration. Input file is expected to have 2
@@ -34,7 +38,8 @@ else:
 
 rule all:
     input:
-        expand(config['out']+"/{sample}/stitch/ortho.tiff", sample=config['SAMP_NAMES'])
+        expand(config['out']+"/{sample}/classify/ortho.json", sample=config['SAMP_NAMES']) if not check_config('parallel') else
+        expand(config['out']+"/{sample}/features/{image}.tsv", sample=config['SAMP_NAMES'], image=[])
 
 rule stitch:
     """ create an orthomosaic from the individual images """
@@ -49,9 +54,9 @@ rule stitch:
 rule export_ortho:
     """ extract an orthomosaic image from the project file """
     input:
-        config['out']+"/{sample}/{step}/stitched.psx"
+        rules.stitch.output
     output:
-        config['out']+"/{sample}/{step}/ortho.tiff"
+        config['out']+"/{sample}/stitch/ortho.tiff"
     conda: "envs/default.yml"
     shell:
         "scripts/export_ortho.py {input} {output}"
@@ -59,9 +64,42 @@ rule export_ortho:
 rule segment:
     """ segment plants from an image """
     input:
-        config['out']+"/{sample}/stitch/ortho.tiff"
+        rules.export_ortho.output
     output:
-        config['out']+"/{sample}/segment/segmented.pickle"
+        config['out']+"/{sample}/segment/ortho.json"
     conda: "envs/default.yml"
     shell:
         "scripts/segment.py {input} {output}"
+
+rule transform:
+    """ transform the segments from the ortho to each image """
+    input:
+        rules.stitch.output,
+        rules.segment.output
+    output:
+        directory(config['out']+"/{sample}/segments")
+    conda: "envs/default.yml"
+    shell:
+        "scripts/transform.py {input} {output}"
+
+rule extract_features:
+    """ extract feature values for each segment """
+    input:
+        lambda wildcards: SAMP[wildcards.sample]+"/{image}.JPG",
+        rules.transform.output+"/{image}.json" if check_config('parallel') else rules.segment.output
+    output:
+        config['out']+"/{sample}/features/"+("{image}.tsv" if check_config('parallel') else "ortho.tsv")
+    conda: "envs/default.yml"
+    shell:
+        "scripts/extract_features.py {input} {output}"
+
+# rule train:
+#     """ train the classifier """
+#     pass
+
+rule classify:
+    """ classify each segment by its species """
+    input:
+        rules.extract_features.output
+    output:
+        config['out']+"{sample}/classify/"+("{image}.tsv" if check_config('parallel') else "ortho.tsv")

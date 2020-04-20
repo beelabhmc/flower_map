@@ -5,11 +5,15 @@
 # Note: this file is written in the YAML syntax (https://learnxinyminutes.com/docs/yaml/)
 
 
-# The path to a text file specifying where to find read information for each sample
+# The path to a text file specifying where to find images (with a .JPG ending) for each sample
 # Each row in the sample file should represent a different sample.
 # The sample file should have 2 columns (each separated by a single tab):
 #       <unique_sample_name> <path_to_images>
 sample_file: data/samples.tsv
+
+# which samples should we execute the pipeline on?
+# Comment out this line if you want to run all samples in the sample file
+SAMP_NAMES: [62217East1, 62217West1, 62217West2, 62317East2, 62617East3]
 
 # Whether to perform strategy 1 or strategy 2
 # Strategy 1 performs segmentation on the stitched orthomosaic, while Strategy 2
@@ -26,6 +30,10 @@ tune: false
 # false negatives and if you choose beta such that beta > 1, the classifier
 # will have more false positives
 beta: 1
+
+# If you already have a trained model, provide it here. Otherwise, comment out
+# this line or set it to a falsey value.
+model: out/test2o/classify/model.rda
 
 # The path to the directory in which to place all of the output files
 # defined relative to whatever directory you execute the snakemake command in
