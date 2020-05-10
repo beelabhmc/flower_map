@@ -54,7 +54,7 @@ df.fillna(0, inplace=True)
 # calculate the metrics
 scores = np.append(
     sklearn.metrics.precision_recall_fscore_support(
-        df['truth'], df['predict'], beta=0.5, average='binary'
+        df['truth'], df['predict'], beta=1, average='binary'
     ),
     sklearn.metrics.confusion_matrix(df['truth'], df['predict']).sum(0)
 )

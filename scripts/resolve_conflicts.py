@@ -32,6 +32,7 @@ from PIL import Image
 
 
 THRESHOLD = 0.67
+Image.MAX_IMAGE_PIXELS = None # so that PIL doesn't complain when we open large files
 
 
 def shoelace(coords):
