@@ -23,20 +23,6 @@ import Metashape
 import numpy as np
 
 
-def transform(chunk, camera_idx, points):
-    """transform camera pixel coordinates to orthomosaic coordinates"""
-    # get the width and height of every pixel in latitude and longitude units
-    x = (chunk.orthomosaic.right-chunk.orthomosaic.left)/chunk.orthomosaic.width
-    y = (chunk.orthomosaic.top-chunk.orthomosaic.bottom)/chunk.orthomosaic.height
-    for point in points:
-        # several steps are being taken here:
-        # 1) the point is projected from pixel coords to the camera's coordinate system
-        # 2) the new point is transformed via matrix multiplcation to geocentric coords
-        # 3) the geocentric coords are projected to geographic coords (ie latitude and longitude)
-        pt = chunk.crs.project(chunk.transform.matrix.mulp(chunk.cameras[camera_idx].unproject(point)))
-        # finally, we convert the pt to pixel coords in the orthomosaic by looking at how far it is from the orthomosaic's top, left corner
-        yield [abs((pt[0]-chunk.orthomosaic.left)/x), abs((chunk.orthomosaic.top-pt[1])/y)]
-
 def rev_transform(chunk, points):
     """transform orthomosaic pixel coordinates to camera coordinates"""
     # get the width and height of the orthomosaic in latitute and longitude units
