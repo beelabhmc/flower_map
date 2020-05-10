@@ -8,7 +8,7 @@ parser.add_argument(
     help="a path to a metashape project file (w/ a psx file ending)"
 )
 parser.add_argument(
-    "out", help="the digital elevation model values"
+    "out", help="the digital elevation model values (specify it as a .xyz file to get a matrix)"
 )
 args = parser.parse_args()
 
@@ -22,4 +22,4 @@ for chunk in doc.chunks:
         break
 
 # export the orthomosaic
-chunk.exportDem(args.out)
+chunk.exportDem(args.out, format=Metashape.RasterFormat.RasterFormatTiles)

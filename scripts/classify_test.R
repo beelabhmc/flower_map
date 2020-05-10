@@ -3,7 +3,7 @@
 # This R script makes predictions on a dataset using a trained classifier
 
 # param1: The path to a TSV containing the data for which to make predictions.
-#         Columns must be named the same as the training data. We recommend using the Snakefile-prepare pipeline to obtain this data.
+#         Columns must be named the same as the training data.
 # param2: An RDA file containing the trained classifier. This is output by classify_train.R
 # param3: The path to a TSV in which to write the predictions. It will be created if it doesn't exist.
 

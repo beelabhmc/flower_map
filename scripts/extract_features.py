@@ -19,7 +19,7 @@ from PIL import Image, ImageDraw
 
 
 NUM_FEATURES = 19
-
+Image.MAX_IMAGE_PIXELS = None # so that PIL doesn't complain when we open large files
 
 # load the image
 img = Image.open(args.img).convert("RGB")
@@ -46,7 +46,7 @@ def processLabel(label):
     # mask = np.zeros((img.shape[0], img.shape[1])
     mask = Image.new('L', (img_array.shape[1], img_array.shape[0]), 0)
     ImageDraw.Draw(mask).polygon(
-        [tuple(label) for label in labels[i]],
+        [tuple(coord) for coord in label],
         outline=1, fill=1
     )
 
