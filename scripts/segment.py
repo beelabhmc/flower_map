@@ -15,14 +15,36 @@ args = parser.parse_args()
 import features
 import cv2 as cv
 import numpy as np
-from test_util import *
+#from test_util import * # uncomment for testing
+# import matplotlib.pyplot as plt # uncomment for testing
+# plt.ion() # uncomment for testing
 
 
-def sliding_window(img, size, fnctn, num_features=1, skip=0):
+# CONSTANTS
+PARAMS = {
+    'texture': {
+        'window_radius': 2,
+        'num_features': 6,
+        'inverse_resolution': 30,
+        'threshold': 1300,
+        'closing': {
+            'struct_element_size': 16,
+            'iterations': 4
+        },
+        'opening': {
+            'struct_element_size': 31,
+            'iterations': 2
+        }
+    }
+}
+
+
+def sliding_window(img, fnctn, size, num_features=1, skip=0):
     """
-        run fnctn over each sliding, square window of len/width 2*size+1, skipping every skip pixel
+        run fnctn over each sliding, square window of width 2*size+1, skipping every skip pixel
+        store the result in a np arr of equal size as the img but with depth equal to num_features
     """
-    # make a shape x 6 array, since there are 6 texture features
+    # make a shape x num_features array, since there are num_features features
     new = np.empty(img.shape+(num_features,))
     # run a sliding window over the i and j indices
     for i in range(0, img.shape[0], skip):
@@ -44,15 +66,14 @@ img = cv.imread(args.image)
 print('calculating textures (this may take a while)')
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 if True:
-    texture = sliding_window(gray, 2, features.glcm, 6, 30)
+    texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
 else:
     texture = np.load("temp/texture.npy")
-thresh_contrast = cv.threshold(texture[:,:,0], 1300, 255, cv.THRESH_BINARY)[1]
+thresh_contrast = cv.threshold(texture[:,:,0], PARAMS['texture']['threshold'], 255, cv.THRESH_BINARY)[1]
 
 print('performing morphological operations to remove noise from texture')
-thresh_contrast_closing = cv.morphologyEx(thresh_contrast, cv.MORPH_CLOSE, np.ones((16,16), np.uint8), iterations = 4)
-thresh_contrast_opening = cv.morphologyEx(thresh_contrast_closing, cv.MORPH_OPEN, np.ones((31,31), np.uint8), iterations = 2)
-
+thresh_contrast_closing = cv.morphologyEx(thresh_contrast, cv.MORPH_CLOSE, np.ones((PARAMS['texture']['closing']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['closing']['iterations'])
+thresh_contrast_opening = cv.morphologyEx(thresh_contrast_closing, cv.MORPH_OPEN, np.ones((PARAMS['texture']['opening']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['opening']['iterations'])
 # plot_img(create_arr([img, thresh_contrast, thresh_contrast_closing, thresh_contrast_opening], 2,2))
 
 # blur image to remove noise from flowers
@@ -89,7 +110,7 @@ tclosing = cv.morphologyEx(topening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), it
 
 # Finding unknown region
 print('identifying unknown regions (those not classified as either foreground or background)')
-unknown = cv.subtract(closing, tconfident)
+unknown = cv.subtract(closing, confident)
 
 # Marker labelling
 print('marking connected components')
