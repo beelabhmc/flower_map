@@ -1,0 +1,234 @@
+---
+title: "Dataset & Analysis Buckwheat 2017"
+author: "Matina Donaldson-Matasci"
+date: "Aug 3, 2018"
+output: html_document
+---
+
+```{r include=FALSE}
+require(ggplot2)
+theme_set(theme_minimal())
+require(dplyr)
+require(tidyr)
+library(grid)
+#require(lubridate)
+#require(multcomp)
+require(lme4)
+require(lmerTest)
+require(sjPlot)
+```
+
+## Hypotheses
+
+1. General Pattern: Honey bees visit large plants at a higher rate per flower, compared to small plants
+1. Mechanism (salience): Honey bees are able to find large plants more easily than small plants.
+1. Mechanism (economic efficiency): Honey bees prefer large plants because flowers tend to be more dense on those plants, and thus economic efficiency for traveling between flowers is higher.
+1. Mechanism (economic reward): Honey bees prefer large plants because flowers tend to have a higher reward (greater volume and/or sugar concentration).
+1. Mechanism (potential for colony): Honey bees prefer large plants because they will support many more trips to collect nectar and thus, over the longer term, offer a greater reward to the colony.
+
+## Data description
+
+We observed honey bees visiting California buckwheat (*Eriogonum fascitulatum*) flowers over a period of three weeks in June 2017. Each week, we picked 6-8 pairs of plants near one another which differed in overall size, so that other features of the surrounding landscape would be more similar and we could focus on the impact of plant size. For each plant, we chose a quadrat to observe over a period of 15 minutes.
+
+We also measured plant height, total nectar content, and created an overhead image of the plant using a drone. We then outlined the area of the flowering part of the plant and selected flower-colored portions of the plant to calculate both flower density (proportion of the plant area covered with flowers) and total flower area (the total area, in m2, of flowering.)
+
+```{r}
+bw <- read.csv("../data/buckwheat_fullData.csv", header=T)
+
+bw <- bw %>% 
+  mutate(Observation = paste(Date, Pair, Size))
+
+nectar.summary <- bw %>%
+  group_by(Observation) %>%
+  summarise(avgSugarContent = mean(sugarContPerFlow))
+
+plant.summary <- distinct(select(bw,-sugarContPerFlow,-X))
+
+bw <- inner_join(nectar.summary,plant.summary, by="Observation")
+
+bw <- bw %>% 
+  mutate(log.fl.density = log(flowerDensity)) %>%
+  mutate(log.sugar = log(avgSugarContent)) %>%
+  mutate(log.fl.area = log(flowerArea)) %>%
+  mutate(log.infl.obs = log(infl_Obs)) %>%
+  mutate(log.fpi = log(aveFlowPerInfl))
+```
+
+Show patterns of data.
+
+```{r}
+bw %>% 
+  ggplot(aes(x=Date,y=Honeybees,col=Size)) + geom_point()
+heightplot <- bw %>% 
+  ggplot(aes(x=Size,y=height,fill=Size)) + geom_boxplot() + 
+  ylab("Plant height (m)") +
+  guides(fill = "none")
+efficiencyplot <- bw %>% 
+  ggplot(aes(x=Size,y=flowerDensity,fill=Size)) + geom_boxplot() + 
+  ylab("Flower density (proportion)") +
+  guides(fill = "none")
+rewardplot <- bw %>% 
+  ggplot(aes(x=Size,y=avgSugarContent,fill=Size)) + geom_boxplot() + 
+  ylab("Sugar content/flower") +
+  guides(fill = "none")
+potentialplot <- bw %>% 
+  ggplot(aes(x=Size,y=flowerArea,fill=Size)) + geom_boxplot() + 
+  ylab("Total flower area")
+
+grid.newpage()
+grid.draw(cbind(ggplotGrob(heightplot), ggplotGrob(efficiencyplot),ggplotGrob(rewardplot), ggplotGrob(potentialplot), size = "last"))
+```
+
+## Data analysis
+
+Assuming that honey bee visitation occurs according to a Poisson model, with some random effects to account for overdispersion, we can create a null model that looks like this:
+
+```{r}
+model.null.hb <- glmer(Honeybees ~ 1 + (1|Date/Pair/Size), 
+                        family="poisson", data=bw)
+summary(model.null.hb)
+deviance(model.null.hb)/df.residual(model.null.hb)
+1-pchisq(deviance(model.null.hb),df.residual(model.null.hb))
+```
+
+### General Pattern: Honey bees prefer large plants
+
+Honey bees visit large plants at a higher rate per flower, compared to small plants.
+
+```{r}
+model.size.hb <- glmer(Honeybees ~ Size + (1|Date/Pair/Size), 
+                        family="poisson", data=bw)
+summary(model.size.hb)
+deviance(model.size.hb)/df.residual(model.size.hb)
+1-pchisq(deviance(model.size.hb),df.residual(model.size.hb))
+```
+
+```{r fig.height=3}
+ggplot(bw, aes(x=Size, y=Honeybees, group=Pair, color=Size))+
+  geom_line(color="gray")+
+  geom_point()+
+  facet_grid(.~Date)+
+  theme_classic()
+```
+
+
+#### Full model
+
+```{r fig.height=3}
+model.full.hb <- glmer(Honeybees ~ height + log.fl.density + log.sugar + log.fl.area + (1|Date/Pair/Size), 
+                        family="poisson", data=bw)
+summary(model.full.hb)
+deviance(model.full.hb)/df.residual(model.full.hb)
+1-pchisq(deviance(model.full.hb),df.residual(model.full.hb))
+heightplot <- plot_model(model.full.hb, 
+                         type="eff", terms="height",
+                         show.data=T, title="", 
+                         axis.labels = c("Height", "Honeybees"),
+                         axis.lim = c(0,60))
+efficiencyplot <- plot_model(model.full.hb, 
+                             type="eff", terms="log.fl.density",
+                             show.data=T, title="", 
+                             axis.labels = c("Flower density", "Honeybees"),
+                             axis.lim = c(0,60))
+rewardplot <- plot_model(model.full.hb, 
+                         type="eff", terms="log.sugar",
+                         show.data=T, title="", 
+                         axis.labels = c("Sugar", "Honeybees"),
+                         axis.lim = c(0,60))
+potentialplot <- plot_model(model.full.hb, 
+                            type="eff", terms="log.fl.area",
+                            show.data=T, title="", 
+                            axis.labels = c("Flower area (m^2)", "Honeybees"),
+                         axis.lim = c(0,60))
+
+grid.newpage()
+grid.draw(cbind(ggplotGrob(heightplot), 
+                ggplotGrob(efficiencyplot),
+                ggplotGrob(rewardplot), 
+                ggplotGrob(potentialplot), size = "last"))
+
+plot_model(model.full.hb, type="est")
+plot_model(model.full.hb, type="diag", grid=T)
+```
+
+
+### Corrected for number of inflorescences observed
+
+Here we take the number of inflorescences as part of the base model, and then ask how the number of flowers per inflorescence may contribute to visitation.
+
+```{r}
+model.size.hb <- glmer(Honeybees ~ offset(log.infl.obs) + Size + (1|Date/Pair/Size), 
+                        family="poisson", data=bw)
+summary(model.size.hb)
+deviance(model.size.hb)/df.residual(model.size.hb)
+1-pchisq(deviance(model.size.hb),df.residual(model.size.hb))
+```
+
+```{r fig.height=3}
+
+model.full.hb <- glmer(Honeybees ~ height + offset(log.infl.obs) + log.fpi + log.sugar + log.fl.area + (1|Date/Pair/Size), 
+                        family="poisson", data=bw)
+summary(model.full.hb)
+deviance(model.full.hb)/df.residual(model.full.hb)
+1-pchisq(deviance(model.full.hb),df.residual(model.full.hb))
+heightplot <- plot_model(model.full.hb, 
+                         type="eff", terms="height",
+                         show.data=T, title="", 
+                         axis.labels = c("Height", "Honeybees"),
+                         axis.lim = c(0,45))
+efficiencyplot <- plot_model(model.full.hb, 
+                             type="eff", terms="log.fpi",
+                             show.data=T, title="", 
+                             axis.labels = c("Flowers per Inflorescence", "Honeybees"),
+                             axis.lim = c(0,45))
+rewardplot <- plot_model(model.full.hb, 
+                         type="eff", terms="log.sugar",
+                         show.data=T, title="", 
+                         axis.labels = c("Sugar", "Honeybees"),
+                         axis.lim = c(0,45))
+potentialplot <- plot_model(model.full.hb, 
+                            type="eff", terms="log.fl.area",
+                            show.data=T, title="", 
+                            axis.labels = c("Flower area (m^2)", "Honeybees"),
+                         axis.lim = c(0,45))
+
+grid.newpage()
+grid.draw(cbind(ggplotGrob(heightplot), 
+                ggplotGrob(efficiencyplot),
+                ggplotGrob(rewardplot), 
+                ggplotGrob(potentialplot), size = "last"))
+
+plot_model(model.full.hb, type="est")
+plot_model(model.full.hb, type="diag", grid=T)
+```
+
+### Xingyao's way (linear)
+
+```{r}
+bw$logHoneybees = log(bw$Honeybees+1)
+bw$log.density = log(bw$flowerDensity)
+bw$log.sugar = log(bw$avgSugarContent)
+bw$log.area = log(bw$flowerArea)
+
+lmodel.full.hb <- lmer(logHoneybees ~ height + log.density +
+                        log.sugar + log.area + (1|Date), 
+                       data=bw)
+
+summary(lmodel.full.hb)
+```
+
+Now plot.
+
+```{r}
+plot_model(lmodel.full.hb, type="eff", terms="height",show.data=T)
+plot_model(lmodel.full.hb, type="eff", terms="log.density",show.data=T)
+plot_model(lmodel.full.hb, type="eff", terms="log.sugar",show.data=T)
+plot_model(lmodel.full.hb, type="eff", terms="log.area",show.data=T)
+
+```
+
+Some diagnostics.
+
+```{r}
+plot_model(lmodel.full.hb, type="diag")
+```

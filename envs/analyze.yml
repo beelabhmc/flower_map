@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - r
+dependencies:
+  - r-dplyr
+  - r-ggplot2
+  - r-tidyr
+  - r
+  - r-gridgraphics
+  - r-lme4
+  - r-lmerTest
+  - r-sjplot

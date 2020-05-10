@@ -144,6 +144,7 @@ def glcm(im, mask=None, offset=None, features=['contrast', 'dissimilarity', 'hom
     elif type(offset) == int:
         offset = [offset] * 4
     # calculate the glcm and then average over all 4 angles
+    # glcm = np.mean(greycomatrix(newIm, offset, [0, np.pi/4, np.pi/2, 3*np.pi/4])[mask], axis=(-1, -2), keepdims=True)
     glcm = np.mean(greycomatrix(newIm, offset, [0, np.pi/4, np.pi/2, 3*np.pi/4]), axis=(-1, -2), keepdims=True)
 
     returns = []
@@ -181,3 +182,8 @@ def colorMoment(im, mask):
 
 
     return [Hstd, Sstd, Vstd, Hskew, Sskew, Vskew] #return all of the metrics.
+
+
+def sameness(im, segments, segment):
+    """ how many of the segments near segment are of the same species as it? """
+    pass
