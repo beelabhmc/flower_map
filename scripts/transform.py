@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import sys
 import argparse
+from pathlib import Path
 
-parser = argparse.ArgumentParser(description='Extract the transformation matrices of each image from the project file.')
+parser = argparse.ArgumentParser(description='Transform the coordinates of each segment in the orthomosaic to the original drone images.')
 parser.add_argument(
     "project_file", help="a path to a metashape project file (w/ a psx file ending) containing an orthomosaic"
 )
@@ -12,10 +13,12 @@ parser.add_argument(
 parser.add_argument(
     "out", help="a path to a directory in which to store the coordinates of the segmented regions in each image"
 )
+parser.add_argument(
+    "--images", default="", help="a path to the directory in which the original drone images are stored; this argument must be provided if you plan to open the segment files in labelme"
+)
 args = parser.parse_args()
 args.out += '/' if not args.out.endswith('/') else ''
 
-import json
 import Metashape
 import numpy as np
 
@@ -87,6 +90,9 @@ for chunk in doc.chunks:
     if chunk.orthomosaic is not None:
         break
 
+# create the dir if it doesn't already exist
+Path(args.out).mkdir(exist_ok=True)
+
 # import the segments
 # if the data is from labelme, import it using the labelme importer
 if args.segments.endswith('.json'):
@@ -96,29 +102,11 @@ if args.segments.endswith('.json'):
     results = {camera.label:[] for camera in chunk.cameras}
     # convert each segment to coords in the cameras it belongs in
     for label in segments:
-        segment = segments[i]
-        segs = rev_transform(chunk, segment)
+        segs = rev_transform(chunk, segments[label])
         for cam in segs:
             results[cam].append((label, segs[cam]))
-    # write each camera's segments to a file
     for camera in results:
-        # format the segments and write them to a file
-        cam_segments = {
-            'flags': {},
-            'shapes': [
-                {
-                    'label': segs[0],
-                    'line_color': None,
-                    'fill_color': None,
-                    'points': segs[1],
-                    'shape_type': "polygon",
-                    'flags': {}
-                }
-                for segs in results[camera]
-            ]
-        }
-        with open(args.out+camera+'.json', 'w') as out:
-            json.dump(cam_segments, out)
+        import_labelme.write(args.out+camera+'.json', results[camera], args.images+camera+".JPG")
 # # else its a np mask
 # elif args.segments.endswith('.npy'):
 #     segments = np.load(args.segments)

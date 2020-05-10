@@ -114,25 +114,12 @@ if args.out.name.endswith('.npy'):
     np.save(args.out.name, markers)
 elif args.out.name.endswith('.json'):
     # import extra required modules
-    import json
     from imantics import Mask
-    # create json structure
-    cam_segments = {
-        'flags': {},
-        'shapes': [
-            {
-                'label': int(i),
-                'line_color': None,
-                'fill_color': None,
-                'points': Mask(markers == i).polygons().points[0].tolist(),
-                'shape_type': "polygon",
-                'flags': {}
-            }
-            for i in filter(lambda x: x, np.unique(markers))
-        ]
-    }
-    # write the json to a file
-    with open(args.out.name, 'w') as out:
-        json.dump(cam_segments, out)
+    import import_labelme
+    segments = [
+        (int(i), Mask(markers == i).polygons().points[0].tolist())
+        for i in filter(lambda x: x, np.unique(markers))
+    ]
+    import_labelme.write(args.out.name, segments, args.image)
 else:
     sys.exit("Unsupported output file format.")

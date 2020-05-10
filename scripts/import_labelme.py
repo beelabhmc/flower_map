@@ -11,6 +11,7 @@ def main(labels, labeled=False, dims=tuple()):
         # initialize input and output
         labels = json.load(json_file)['shapes']
         segments = {}
+        new_labels = []
         # for each segment, grab its pt and store it in the output
         for i in range(len(labels)):
             pts = labels[i]['points']
@@ -21,15 +22,55 @@ def main(labels, labeled=False, dims=tuple()):
                         pts
                     )
                 )
+            if len(pts) < 3:
+                continue
             # add to the segments dict
             label = labels[i]['label']
             if type(label) != int:
                 # convert the label to an integer, ignoring any chars in the string
                 label = int("".join([s for s in labels[i]['label'] if s.isdigit()]))
             segments[label] = pts
-            # replace in the labels array
-            labels[i] = pts
-    return segments if labeled else labels
+            # add to the new labels array
+            new_labels.append(pts)
+    return segments if labeled else new_labels
+
+def write(file, segments, image_path=None):
+    """
+        write the segments (belonging to image_path) to the file in JSON format
+        segments can be either a list of tuples (label, pts) or a simple list of pts
+        if image_path is provided, the file will be in valid labelme format
+    """
+    with open(file, 'w') as out:
+        json.dump(
+            {
+                'flags': {},
+                'shapes': [
+                    {
+                        'label': str(segment[0]),
+                        'line_color': None,
+                        'fill_color': None,
+                        'points': segment[1],
+                        'shape_type': "polygon",
+                        'flags': {} if len(segment) == 2 else segment[2]
+                    }
+                    if type(segment) is tuple else
+                    {
+                        'label': str(idx),
+                        'line_color': None,
+                        'fill_color': None,
+                        'points': segment,
+                        'shape_type': "polygon",
+                        'flags': {}
+                    }
+                    for idx, segment in enumerate(segments)
+                ],
+                "lineColor": [0,255,0,128],
+                "fillColor": [255,0,0,128],
+                "imagePath": image_path,
+                "imageData": None
+            },
+            out
+        )
 
 if __name__ == '__main__':
     # if this script is being called but not imported:
