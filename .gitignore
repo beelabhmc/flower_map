@@ -3,3 +3,4 @@ data/
 metashape.lic
 .snakemake/
 __pycache__/
+*.pyc
