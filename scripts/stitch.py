@@ -300,7 +300,7 @@ def create_doc(image_path):
     doc = PhotoScan.Document()
     chunk = doc.addChunk()
     image_path = image_path[:-1] if image_path.endswith('/') else image_path
-    images = [image_path+"/"+image for image in tuple(walk(image_path))[0][2]]
+    images = [image_path+"/"+image for image in tuple(walk(image_path))[0][2] if image.endswith('.JPG')]
     chunk.addPhotos(images)
     return doc
 

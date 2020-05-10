@@ -13,7 +13,7 @@ def plot_img(imgs, titles=None):
         ax.axes.get_yaxis().set_visible(False)
     fig.tight_layout()
     print('showing plot')
-    fig.show()
+    fig.show(block=False)
     exit()
 
 def create_arr(lst, *shape):
