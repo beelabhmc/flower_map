@@ -58,6 +58,11 @@ def rev_transform(chunk, points):
     ]
     # add z coords to every x/y point
     chunk.shapes.updateAltitudes(chunk.shapes)
+    # check: did this actually work?
+    # sometimes updateAltitudes won't work. I suspect that this happens when the points are outside our digital elevation model
+    if not shape.has_z:
+        # just ignore this segment
+        return []
     # prepare results: a dictionary keyed by a camera label, containing the coords in that camera
     results = {}
     for camera in chunk.cameras:
@@ -70,6 +75,10 @@ def rev_transform(chunk, points):
             # 3) the coords are projected onto the camera to retrieve their pixel coords on the camera
             # TODO: rewrite these for loops so that we aren't redoing steps 1 and 2 for every camera?
             pt = camera.project(chunk.transform.matrix.inv().mulp(chunk.crs.unproject(point)))
+            # check: did it work?
+            # sometimes it won't work. I have no idea why. But I'm just going to skip this pt then
+            if pt is None:
+                continue
             vertices.append(list(pt))
             # count the pixels that actually exist in the photo
             if (0 <= pt[0] < camera.sensor.width) and (0 <= pt[1] < camera.sensor.height):
