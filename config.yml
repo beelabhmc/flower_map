@@ -13,13 +13,15 @@ sample_file: data/samples.tsv
 
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
-SAMP_NAMES: [62217East1, 62217West1, 62217West2, 62317East2, 62617East3]
+# SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
+SAMP_NAMES: [62217East1, 62217West2, 62317East2]
 
-# Whether to perform strategy 1 or strategy 2
-# Strategy 1 performs segmentation on the stitched orthomosaic, while Strategy 2
-# parallelizes the segmentation step by running it on each of the original images
-# If this option is set to false or commented out, strategy 1 will be used
-parallel: false
+# Whether to perform the default strategy or the experimental one
+# The default strategy performs segmentation on the stitched orthomosaic, while
+# the experimental strategy parallelizes the segmentation step by running it on
+# each of the original images If this option is set to false or commented out,
+# the default strategy will be used
+parallel: true
 
 # Whether to tune the hyparameters of the classifier when traning it
 # Enabling this option will significantly increase the running time of the pipeline
@@ -33,7 +35,7 @@ beta: 1
 
 # If you already have a trained model, provide it here. Otherwise, comment out
 # this line or set it to a falsey value.
-model: out/test2o/classify/model.rda
+model: out/before-benchmark/test2o/classify/model.rda
 
 # The path to the directory in which to place all of the output files
 # defined relative to whatever directory you execute the snakemake command in

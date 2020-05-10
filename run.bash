@@ -1,6 +1,18 @@
 #!/bin/bash
+#$ -t 1
+#$ -S /bin/bash
+#$ -V
+#$ -j y
+#$ -cwd
+#$ -o /dev/null
+#$ -e /dev/null
+
+
+# first, handle some weird behavior where sge passes the noclobber argument to the script
+test "$1" = "noclobber" && shift
 
 # An example bash script demonstrating how to run the entire snakemake pipeline
+# on an SGE cluster
 # This script creates two separate log files:
 # 	1) log - the basic snakemake log of completed rules
 # 	2) qlog - a more detailed log of the progress of each rule and any errors
@@ -24,6 +36,7 @@ fi
 # a samples.tsv file specifying paths to your drone imagery.
 
 snakemake \
+--cluster "qsub -t 1 -V -S /bin/bash -j y -o ${out_path}/qlog" \
 -j 12 \
 --config out="${out_path}" \
 --latency-wait 60 \

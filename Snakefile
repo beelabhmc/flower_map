@@ -1,3 +1,4 @@
+import os
 from snakemake.utils import min_version
 
 ##### set minimum snakemake version #####
@@ -9,6 +10,10 @@ configfile: "config.yml"
 def check_config(value):
     """ return true if config value exists and is true """
     return value in config and config[value]
+
+def exp_str():
+    """ return the prefix str for the experimental strategy """
+    return "-exp" if check_config('parallel') else ""
 
 def read_samples():
     """Function to get names and paths from a sample file
@@ -38,8 +43,7 @@ else:
 
 rule all:
     input:
-        expand(config['out']+"/{sample}/classify/ortho.json", sample=config['SAMP_NAMES']) if not check_config('parallel') else
-        expand(config['out']+"/{sample}/features/{image}.tsv", sample=config['SAMP_NAMES'], image=[])
+        expand(config['out']+"/{sample}/map"+exp_str()+"/ortho.tiff", sample=config['SAMP_NAMES'])
 
 rule stitch:
     """ create an orthomosaic from the individual images """
@@ -48,6 +52,7 @@ rule stitch:
     output:
         config['out']+"/{sample}/stitch/stitched.psx"
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/stitch/ortho.tsv"
     shell:
         "scripts/stitch.py {input} {output}"
 
@@ -58,6 +63,7 @@ rule export_ortho:
     output:
         config['out']+"/{sample}/stitch/ortho.tiff"
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/export_ortho/ortho.tsv"
     shell:
         "scripts/export_ortho.py {input} {output}"
 
@@ -68,10 +74,11 @@ rule segment:
     output:
         config['out']+"/{sample}/segment/ortho.json"
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/segment/ortho.tsv"
     shell:
         "scripts/segment.py {input} {output}"
 
-rule transform:
+checkpoint transform:
     """ transform the segments from the ortho to each image """
     input:
         rules.stitch.output,
@@ -85,11 +92,12 @@ rule transform:
 rule extract_features:
     """ extract feature values for each segment """
     input:
-        lambda wildcards: SAMP[wildcards.sample]+"/{image}.JPG",
-        rules.transform.output+"/{image}.json" if check_config('parallel') else rules.segment.output
+        lambda wildcards: SAMP[wildcards.sample]+"/{image}.JPG" if check_config('parallel') else rules.export_ortho.output,
+        rules.transform.output[0]+"/{image}.json" if check_config('parallel') else rules.segment.output
     output:
-        config['out']+"/{sample}/features/"+("{image}.tsv" if check_config('parallel') else "ortho.tsv")
+        config['out']+"/{sample}/features"+exp_str()+"/{image}.tsv"
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/extract_features"+exp_str()+"/{image}.tsv"
     shell:
         "scripts/extract_features.py {input} {output}"
 
@@ -100,6 +108,55 @@ rule extract_features:
 rule classify:
     """ classify each segment by its species """
     input:
-        rules.extract_features.output
+        rules.extract_features.output,
+        config['model'] if check_config('model') else ""
     output:
-        config['out']+"{sample}/classify/"+("{image}.tsv" if check_config('parallel') else "ortho.tsv")
+        config['out']+"/{sample}/classify"+exp_str()+"/{image}.tsv"
+    conda: "envs/classify.yml"
+    benchmark: config['out']+"/{sample}/benchmark/classify"+exp_str()+"/{image}.tsv"
+    shell:
+        "scripts/classify_test.R {input} {output}"
+
+
+def classified_images(wildcards):
+    """ get paths to the classified images """
+    return expand(
+        rules.classify.output,
+        sample=wildcards.sample,
+        image=glob_wildcards(
+            os.path.join(
+                checkpoints.transform.get(**wildcards).output[0],
+                "{image}.json"
+            )
+        ).image
+    )
+
+
+rule resolve_conflicts:
+    """ resolve any conflicting classifications from the experimental strategy """
+    input:
+        img = rules.export_ortho.output,
+        labels = rules.transform.output,
+        predicts = classified_images
+    params:
+        predicts = lambda wildcards, input: os.path.dirname(input.predicts[0])
+    output:
+        config['out']+"/{sample}/resolve_conflicts/ortho.tsv"
+    conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/resolve_conflicts/ortho.tsv"
+    shell:
+        "scripts/resolve_conflicts.py {input.img} {input.labels} {params.predicts} {output}"
+
+rule map:
+    """ overlay each segment and its predicted species back onto the orthomosaic img to create a map """
+    input:
+        img = rules.export_ortho.output,
+        labels = rules.segment.output,
+        predicts = rules.resolve_conflicts.output if check_config('parallel') else rules.classify.output[0].format(sample='{sample}', image='ortho')
+    output:
+        config['out']+"/{sample}/map"+exp_str()+"/{ortho}.tiff"
+    conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/map"+exp_str()+"/{ortho}.tsv"
+    shell:
+        "scripts/map.py {input.img} {input.labels} {output} {input.predicts}"
+
