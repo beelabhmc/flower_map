@@ -6,7 +6,7 @@ parser.add_argument(
     "img", help="the path to the image upon which to create the map"
 )
 parser.add_argument(
-    "labels", help="the path to the file containing the coordinates of each segmented region"
+    "segments", help="the path to the file containing the coordinates of each segmented region"
 )
 parser.add_argument(
     "out", help="a map of the flowering species in the image"
@@ -61,10 +61,10 @@ def get_color(predicts, i, unique = False):
             return [211,211,211,255]
 
 # if the data is from labelme, import it using the labelme importer
-if args.labels.endswith('.json'):
+if args.segments.endswith('.json'):
     import import_labelme
-    if predicts.index.name == 'label':
-        labels = import_labelme.main(args.labels, True, img.shape[-2::-1])
+    if predicts is not None and predicts.index.name == 'label':
+        labels = import_labelme.main(args.segments, True, img.shape[-2::-1])
         label_keys = sorted(labels.keys())
         # make sure the segments are in sorted order, according to the keys
         labels = [np.array(labels[i]).astype(np.int32) for i in label_keys]
@@ -72,12 +72,12 @@ if args.labels.endswith('.json'):
         for i in range(len(labels)):
             cv.drawContours(img, labels, i, get_color(predicts, label_keys[i]), 7)
     else:
-        labels = [np.array(segment).astype(np.int32) for segment in import_labelme.main(args.labels, False, img.shape[-2::-1])]
+        labels = [np.array(segment).astype(np.int32) for segment in import_labelme.main(args.segments, False, img.shape[-2::-1])]
         # draw each label onto the img
         for i in range(len(labels)):
             cv.drawContours(img, labels, i, get_color(predicts, i), 7)
-elif args.labels.endswith('.npy'):
-    markers = np.load(args.labels)
+elif args.segments.endswith('.npy'):
+    markers = np.load(args.segments)
     # first, get the marker IDs (ie 0, 1, 2, ...)
     marker_ids = np.unique(markers)
     # next, ignore the marker id for the background (ie 0)
