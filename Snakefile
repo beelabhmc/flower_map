@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from snakemake.utils import min_version
 
 ##### set minimum snakemake version #####
@@ -7,9 +8,9 @@ min_version("5.8.0")
 configfile: "config.yml"
 
 
-def check_config(value):
+def check_config(value, default=False):
     """ return true if config value exists and is true """
-    return value in config and config[value]
+    return config[value] if (value in config and config[value] is not None) else default
 
 def exp_str():
     """ return the prefix str for the experimental strategy """
@@ -49,21 +50,23 @@ rule stitch:
     """ create an orthomosaic from the individual images """
     input:
         lambda wildcards: SAMP[wildcards.sample]
+    params:
+        low_qual = "--fast" if check_config('low_qual_ortho', check_config('parallel')) else ""
     output:
-        config['out']+"/{sample}/stitch/stitched.psx"
+        config['out']+"/{sample}/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+"/stitched.psx"
     conda: "envs/default.yml"
-    benchmark: config['out']+"/{sample}/benchmark/stitch/ortho.tsv"
+    benchmark: config['out']+"/{sample}/benchmark/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+".tsv"
     shell:
-        "scripts/stitch.py {input} {output}"
+        "scripts/stitch.py {params} {input} {output}"
 
 rule export_ortho:
     """ extract an orthomosaic image from the project file """
     input:
         rules.stitch.output
     output:
-        config['out']+"/{sample}/stitch/ortho.tiff"
+        str(Path(rules.stitch.output[0]).parents[0])+"/ortho.tiff"
     conda: "envs/default.yml"
-    benchmark: config['out']+"/{sample}/benchmark/export_ortho/ortho.tsv"
+    benchmark: config['out']+"/{sample}/benchmark/export_ortho.tsv"
     shell:
         "scripts/export_ortho.py {input} {output}"
 

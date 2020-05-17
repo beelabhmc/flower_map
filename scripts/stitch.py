@@ -56,7 +56,7 @@ QualityCriteria = 0.5
 #
 # Variables for photo alignment
 # Accuracy: HighestAccuracy, HighAccuracy, MediumAccuracy, LowAccuracy, LowestAccuracy
-Accuracy = PhotoScan.Accuracy.HighAccuracy
+Accuracy = PhotoScan.Accuracy.HighestAccuracy
 Key_Limit = 60000
 Tie_Limit = 0
 #
@@ -315,10 +315,18 @@ if __name__ == '__main__':
         help="a path to a folder containing the drone imagery to stitch with"
     )
     parser.add_argument(
+        "--fast",  action='store_true',
+        help="whether to perform fast, low quality stitching instead of the regular high quality kind. use this flag if you care only about aligning images and not about the quality of the orthomosaic"
+    )
+    parser.add_argument(
         "out",
         help="the stitched orthomosaic, as a metashape project file (a psx file)"
     )
     args = parser.parse_args()
+
+    if args.fast:
+        Quality = PhotoScan.Quality.LowestQuality
+        BlendingMode = PhotoScan.BlendingMode.DisabledBlending
 
     doc = create_doc(args.images)
 

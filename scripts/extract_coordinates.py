@@ -9,7 +9,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "out", nargs='?', type=argparse.FileType('w', encoding='UTF-8'), default=sys.stdout,
-    help="the path to a tsv file in which to store the coordinates of each extracted object"
+    help="the path to a tsv file in which to store the coordinates of each extracted object (default: stdout)"
 )
 args = parser.parse_args()
 
