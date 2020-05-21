@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
 import argparse
 
-parser = argparse.ArgumentParser(description='Segment the image into objects.')
-parser.add_argument(
-    "image",
-    help="a path to the image to segment"
+parser = argparse.ArgumentParser(
+    description=
+    """
+        Segment the image into objects and output both 1) contours which we are
+        highly confident have plants and 2) contours which we have less
+        confidence contain plants (where the contours from #1 are contained
+        within the regions outlined by #2). You can run watershed with #1 and
+        #2 to get the resulting contours.
+    """
 )
 parser.add_argument(
-    "out", type=argparse.FileType('w', encoding='UTF-8'),
-    help="the path to a file in which to store the coordinates of each extracted object"
+    "image", help="a path to the image to segment"
+)
+parser.add_argument(
+    "out_high", help="the path to a file in which to store the coordinates of each extracted high confidence object"
+)
+parser.add_argument(
+    "out_low", help="the path to a file in which to store the coordinates of each extracted low confidence object"
 )
 args = parser.parse_args()
+if not (
+    (args.out_high.endswith('.json') or args.out_high.endswith('.npy')) and
+    (args.out_low.endswith('.json') or args.out_low.endswith('.npy'))
+):
+    parser.error('Unsupported output file type. The files must have a .json or .npy ending.')
 
 import features
 import cv2 as cv
@@ -60,6 +75,24 @@ def sliding_window(img, fnctn, size, num_features=1, skip=0):
             new[i:next_i,j:next_j,:] = fnctn(img[i1:i2,j1:j2])
     return new
 
+def export_results(mask, out):
+    """ write the resulting mask to a file """
+    markers = cv.connectedComponents(mask.astype(np.uint8))[1]
+    # should we save the segments as a mask or as bounding boxes?
+    if out.endswith('.npy'):
+        np.save(out, markers)
+    elif out.endswith('.json'):
+        # import extra required modules
+        from imantics import Mask
+        import import_labelme
+        segments = [
+            (int(i), Mask(markers == i).polygons().points[0].tolist())
+            for i in filter(lambda x: x, np.unique(markers))
+        ]
+        import_labelme.write(out, segments, args.image)
+    else:
+        raise Exception("Unsupported output file format.")
+
 print('loading image')
 img = cv.imread(args.image)
 
@@ -108,39 +141,7 @@ tclosing = cv.morphologyEx(topening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), it
 # plot_img(create_arr([img, topening1, tclosing1, topening, tclosing, blur, opening1, closing1, opening, closing], 2, 5))
 # plot_img(create_arr([img, thresh_green2_orig, thresh_green2, tconfident, tclosing, blur, thresh_green_orig, thresh_green, confident, closing], 2, 5), create_arr(['original', 'green', 'green + contrast', 'confident', 'final', 'blur', 'blurred green', 'blurred green + contrast', 'confident', 'final'], 2, 5))
 
-# Finding unknown region
-print('identifying unknown regions (those not classified as either foreground or background)')
-unknown = cv.subtract(closing, confident)
-
-# Marker labelling
-print('marking connected components')
-# ret, markers = cv.connectedComponents(sure_fg)
-ret, markers = cv.connectedComponents(tconfident.astype(np.uint8))
-# Add one to all labels so that sure background is not 0, but 1
-markers = markers+1
-# Now, mark the region of unknown with zero
-markers[unknown==255] = 0
-
-print('running the watershed algorithm')
-markers = cv.watershed(img,markers)
-# img[markers == -1] = [255,0,0]
-
-# # finally, now that we have each pixel marked according to the region it belongs to
-# print('finding polygons')
-markers[markers == -1] = 1
-markers -= 1
-
-# should we save the segments as a mask or as bounding boxes?
-if args.out.name.endswith('.npy'):
-    np.save(args.out.name, markers)
-elif args.out.name.endswith('.json'):
-    # import extra required modules
-    from imantics import Mask
-    import import_labelme
-    segments = [
-        (int(i), Mask(markers == i).polygons().points[0].tolist())
-        for i in filter(lambda x: x, np.unique(markers))
-    ]
-    import_labelme.write(args.out.name, segments, args.image)
-else:
-    sys.exit("Unsupported output file format.")
+# save the resulting masks to files
+print('writing resulting masks to output files')
+export_results(closing, args.out_low)
+export_results(tconfident, args.out_high)
