@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 
 parser = argparse.ArgumentParser(
     description="Run the watershed algorithm to produce segmented regions in an orthomosaic. Or run watershed with multiple overlapping segmented regions."
@@ -8,31 +9,32 @@ parser.add_argument(
     "ortho", help="the path to the orthomosaic image"
 )
 parser.add_argument(
-    "high", help="the path to the file that contain the coordinates of each extracted high confidence object (or a glob path if there are multiple such files)"
+    "high", type=Path, help="the path to the file that contain the coordinates of each extracted high confidence object (or a directory if there are multiple such files)"
 )
 parser.add_argument(
-    "low", help="the path to the file that contain the coordinates of each extracted low confidence object (or a glob path if there are multiple such files)"
+    "low", type=Path, help="the path to the file that contain the coordinates of each extracted low confidence object (or a directory if there are multiple such files)"
 )
 parser.add_argument(
-    "-g", "--glob", action='store_true', help="whether to interpret the 'high' and 'low' file paths as globs that match multiple files instead of just one"
+    "-m", "--map", default=None, help="a json file in which to store a dictionary mapping the labels of the original segmented regions to their corresponding merged labels in the orthomosaic; the original segments are labeled by their file name"
 )
 parser.add_argument(
     "out", help="the path to the final segmented regions produced by running the watershed algorithm"
 )
-# parser.add_argument(
-#     "out_high", help="the path to the final segmented regions produced by running the watershed algorithm"
-# )
-# parser.add_argument(
-#     "out_low", help="the path to the final segmented regions produced by running the watershed algorithm"
-# )
 args = parser.parse_args()
-if not (
-    (args.high.endswith('.json') or args.high.endswith('.npy')) and
-    (args.low.endswith('.json') or args.low.endswith('.npy')) and
-    (args.out.endswith('.json') or args.out.endswith('.npy'))
-):
-    parser.error('Unsupported segments input or output file type. The files must have a .json or .npy ending.')
+# validate the input
+if args.high.is_dir() ^ args.low.is_dir():
+    parser.error('Either the high and low args must both be directories, or they must both be files. One cannot be a file while the other is a directory.')
+if args.high.is_dir():
+    args.high = [f for f in sorted(args.high.iterdir()) if f.is_file() and f.suffix == '.json']
+    args.low = [f for f in sorted(args.low.iterdir()) if f.is_file() and f.suffix == '.json']
+else:
+    args.high = [args.high] if args.high.suffix == '.json' else []
+    args.low = [args.low] if args.low.suffix == '.json' else []
+if not (len(args.high) == len(args.low) and len(args.high) and args.out.endswith('.json')):
+    # TODO: support .npy files so that this error message becomes correct
+    parser.error('Unsupported segments input (high and low args) or output (out arg) file type. The files must have a .json ending.')
 
+import json
 import cv2 as cv
 import numpy as np
 import import_labelme
@@ -49,18 +51,21 @@ def import_segments(file, img_shape=cv.imread(args.ortho)[-2::-1], pts=True):
     """
     # if the data is from labelme, import it using the labelme importer
     if file.endswith('.json'):
-        labels = Polygons(import_labelme.main(file, False, img_shape))
+        labels = import_labelme.main(file, True, img_shape)
+        label_keys = sorted(labels.keys())
+        # make sure the segments are in sorted order, according to the keys
+        labels = Polygons([labels[i] for i in label_keys])
         if pts:
             pts = {
-                tuple(np.around(labels.points[i].mean(axis=0)).astype(np.uint))[::-1] : i
+                label_keys[i] : tuple(np.around(labels.points[i].mean(axis=0)).astype(np.uint))[::-1]
                 for i in range(len(labels.points))
             }
         segments = labels.mask(*img_shape).array
     elif file.endswith('.npy'):
+        segments = np.load(file) != 0
         if pts:
             # todo: implement pts here
             pts = {}
-        segments = np.load(file) != 0
     else:
         raise Exception('Unsupported input file format.')
     return (pts, segments) if pts else segments
@@ -84,9 +89,9 @@ img = cv.imread(args.ortho)
 
 print('loading segments')
 high, low = None, None
-pts = {'ortho':None}
-for cam in pts:
-    pts[cam], high, low = load_segments(args.high, args.low, high, low, img.shape[:2])
+pts = {cam.stem:None for cam in args.high}
+for high_file, low_file in zip(args.high, args.low):
+    pts[high_file.stem], high, low = load_segments(str(high_file), str(low_file), high, low, img.shape[:2])
 # convert to uint8
 high, low = high.astype(np.uint8), low.astype(np.uint8)
 
@@ -111,30 +116,31 @@ markers = cv.watershed(img,markers)
 markers[markers == -1] = 1
 markers -= 1
 
-# data structure for mapping orthomosaic segments to drone image segments:
-# list:
-#   key: orthomosaic segment ID
-#   value: a set of tuples: drone image segment ID
-#
-# algorithm to construct this data structure:
-# 1) keep a running dictionary mapping an arbitrary point in a drone image segment to its tuple
-# 2) after you've collected all of the points, go through each ortho connected component and
-#   1) isolate the points that are contained within it
-#   2) add their tuples to the dictionary set
-#   3) delete the points that you added (from the pts dictionary)
-# 3) raise an error if there are any points left
-ortho_to_drone = [set() for i in range(ret-1)]
-for i in range(1, ret):
+if args.map is not None:
+    # a data structure for mapping drone image segments to orthomosaic segments
+    # will be useful for resolving conflicts later:
+    # dictionary:
+    #   key: a camera name
+    #   value:
+    #       another dictionary:
+    #           key: the drone image segment label
+    #           value: the orthomosaic segment id
+    #
+    # algorithm to construct this data structure:
+    # 1) keep a running dictionary mapping a drone image segment to an arbitrary
+    #    point in that segment (ex: its centroid)
+    # 2) after you've collected all of the points, go through each point and find
+    #    the id of the orthomosaic segment it belongs in
+    # 3) replace the point with the newfound id
     for cam in pts:
-        for pt in list(pts[cam].keys()):
-            if markers[pt] == i:
-                ortho_to_drone[i-1].add((cam, pts[cam][pt]))
-                del pts[cam][pt]
+        for label in pts[cam]:
+            pts[cam][label] = str(markers[pts[cam][label]])
 
+print('writing to desired output files')
 # should we save the segments as a mask or as bounding boxes?
-if args.out.name.endswith('.npy'):
-    np.save(args.out.name, markers)
-elif args.out.name.endswith('.json'):
+if args.out.endswith('.npy'):
+    np.save(args.out, markers)
+elif args.out.endswith('.json'):
     # import extra required modules
     from imantics import Mask
     import import_labelme
@@ -142,6 +148,10 @@ elif args.out.name.endswith('.json'):
         (int(i), Mask(markers == i).polygons().points[0].tolist())
         for i in filter(lambda x: x, np.unique(markers))
     ]
-    import_labelme.write(args.out.name, segments, args.image)
+    import_labelme.write(args.out, segments, args.ortho)
 else:
     sys.exit("Unsupported output file format.")
+
+# also create the map file if the user requested it
+if args.map is not None:
+    json.dump(pts, open(args.map, 'w'))
