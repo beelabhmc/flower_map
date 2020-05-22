@@ -7,13 +7,21 @@
 
 # The path to a text file specifying where to find images (with a .JPG ending) for each sample
 # Each row in the sample file should represent a different sample.
-# The sample file should have 2 columns (each separated by a single tab):
-#       <unique_sample_name> <path_to_images>
+# The sample file should have 3 columns (each separated by a single tab):
+#       <unique_sample_name> <path_to_images> <image_ext>
+# Here's an example:
+#       test                 data/test        .JPG
+# Note that <image_ext> is optional. If it isn't provided (ie there is no tab
+# after <path_to_images>, the ext will be inferred based on the most common
+# file extension among the files in the <path_to_images> dir. If <image_ext>
+# is blank (ie there is a trailing tab but no ext), all of the files in the
+# <path_to_images> directory will be assumed to be images.
 sample_file: data/samples.tsv
 
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
-SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
+# SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
+SAMP_NAMES: [test2]
 
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
