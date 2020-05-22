@@ -40,8 +40,9 @@ def write(file, segments, image_path=None):
         segments can be either a list of tuples (label, pts) or a simple list of pts
         if image_path is provided, the file will be in valid labelme format
     """
-    import os.path
-    image_path = os.path.relpath(image_path, file)
+    if image_path:
+        import os.path
+        image_path = os.path.relpath(image_path, file)
     with open(file, 'w') as out:
         json.dump(
             {
