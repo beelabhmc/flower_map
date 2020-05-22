@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-def plot_img(imgs, titles=None):
+def plot_img(imgs, titles=None, close=False):
     fig, axes = plt.subplots(*imgs.shape, figsize=(15.3,7.4))
     for i, ax in np.ndenumerate(axes):
         if len(i) == 1:
@@ -13,8 +13,9 @@ def plot_img(imgs, titles=None):
         ax.axes.get_yaxis().set_visible(False)
     fig.tight_layout()
     print('showing plot')
-    fig.show(block=False)
-    exit()
+    fig.show()
+    if close:
+        exit()
 
 def create_arr(lst, *shape):
     if not shape:

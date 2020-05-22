@@ -30,7 +30,7 @@ if not (
 import features
 import cv2 as cv
 import numpy as np
-#from test_util import * # uncomment for testing
+# from test_util import * # uncomment for testing
 # import matplotlib.pyplot as plt # uncomment for testing
 # plt.ion() # uncomment for testing
 
@@ -114,7 +114,6 @@ thresh_contrast = cv.threshold(texture[:,:,0], PARAMS['texture']['threshold'], 2
 print('performing morphological operations to remove noise from texture')
 thresh_contrast_closing = cv.morphologyEx(thresh_contrast, cv.MORPH_CLOSE, np.ones((PARAMS['texture']['closing']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['closing']['iterations'])
 thresh_contrast_opening = cv.morphologyEx(thresh_contrast_closing, cv.MORPH_OPEN, np.ones((PARAMS['texture']['opening']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['opening']['iterations'])
-# plot_img(create_arr([img, thresh_contrast, thresh_contrast_closing, thresh_contrast_opening], 2,2))
 
 # blur image to remove noise from flowers
 print('blurring image to remove noise')
@@ -124,31 +123,20 @@ print('creating thresholded matrix')
 # hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
 # order of colors is blue, green, red
 thresh_green_orig = cv.bitwise_not(cv.inRange(blur, (0, 92, 0), (255, 255, 255)))
-thresh_green2_orig = cv.bitwise_not(cv.inRange(img, (0, 85, 0), (255, 255, 255)))
 
 thresh_green = np.logical_or(thresh_contrast_opening, thresh_green_orig).astype(np.float)*255
-thresh_green2 = np.logical_or(thresh_contrast_opening, thresh_green2_orig).astype(np.float)*255
-
-# plot_img(create_arr([img, thresh_green2_orig, thresh_green2, blur, thresh_green_orig, thresh_green], 2, 3), create_arr(['original', 'green', 'green + contrast', 'blur', 'blurred green', 'blurred green + contrast'], 2, 3))
 
 # noise removal
 print('performing morphological operations to remove noise from green')
 opening1 = cv.morphologyEx(thresh_green,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 1)
 closing1 = cv.morphologyEx(opening1, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 5)
-confident= cv.morphologyEx(closing1,cv.MORPH_OPEN, np.ones((6,6),np.uint8), iterations = 23)
+confident= cv.morphologyEx(closing1,cv.MORPH_OPEN, np.ones((6,6),np.uint8), iterations = 18)
 opening = cv.morphologyEx(closing1, cv.MORPH_OPEN, np.ones((3,3),np.uint8), iterations = 5)
-closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 15)
+closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 20)
 
-topening1 = cv.morphologyEx(thresh_green2,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 1)
-tclosing1 = cv.morphologyEx(topening1, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 7)
-tconfident = cv.morphologyEx(tclosing1,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 23)
-topening = cv.morphologyEx(tclosing1, cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 5)
-tclosing = cv.morphologyEx(topening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 15)
-
-# plot_img(create_arr([img, topening1, tclosing1, topening, tclosing, blur, opening1, closing1, opening, closing], 2, 5))
-# plot_img(create_arr([img, thresh_green2_orig, thresh_green2, tconfident, tclosing, blur, thresh_green_orig, thresh_green, confident, closing], 2, 5), create_arr(['original', 'green', 'green + contrast', 'confident', 'final', 'blur', 'blurred green', 'blurred green + contrast', 'confident', 'final'], 2, 5))
+# plot_img(create_arr([img, opening1, closing1, confident, opening, closing], 2, 3), close=True)
 
 # save the resulting masks to files
 print('writing resulting masks to output files')
+export_results(confident, args.out_high)
 export_results(closing, args.out_low)
-export_results(tconfident, args.out_high)
