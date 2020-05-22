@@ -75,9 +75,16 @@ def sliding_window(img, fnctn, size, num_features=1, skip=0):
             new[i:next_i,j:next_j,:] = fnctn(img[i1:i2,j1:j2])
     return new
 
+def largest_polygon(polygons):
+    """ get the largest polygon among the polygons """
+    # we should probably use a complicated formula to do this
+    # but for now, it probably suffices to notice that the last one is usually
+    # the largest
+    return polygons.points[-1]
+
 def export_results(mask, out):
     """ write the resulting mask to a file """
-    markers = cv.connectedComponents(mask.astype(np.uint8))[1]
+    ret, markers = cv.connectedComponents(mask.astype(np.uint8))
     # should we save the segments as a mask or as bounding boxes?
     if out.endswith('.npy'):
         np.save(out, markers)
@@ -86,8 +93,8 @@ def export_results(mask, out):
         from imantics import Mask
         import import_labelme
         segments = [
-            (int(i), Mask(markers == i).polygons().points[0].tolist())
-            for i in filter(lambda x: x, np.unique(markers))
+            (int(i), largest_polygon(Mask(markers == i).polygons()).tolist())
+            for i in range(1, ret)
         ]
         import_labelme.write(out, segments, args.image)
     else:

@@ -83,6 +83,30 @@ def load_segments(high, low, high_all=None, low_all=None, img_shape=cv.imread(ar
     # now merge the segments with the cumulative high and low masks
     return pts, np.logical_or(high_all, high_segs), np.logical_or(low_all, low_segs)
 
+def largest_polygon(polygons):
+    """ get the largest polygon among the polygons """
+    # we should probably use a complicated formula to do this
+    # but for now, it probably suffices to notice that the last one is usually
+    # the largest
+    return polygons.points[-1]
+
+def export_results(ret, markers, out):
+    """ write the resulting mask to a file """
+    # should we save the segments as a mask or as bounding boxes?
+    if out.endswith('.npy'):
+        np.save(out, markers)
+    elif out.endswith('.json'):
+        # import extra required modules
+        from imantics import Mask
+        import import_labelme
+        segments = [
+            (int(i), largest_polygon(Mask(markers == i).polygons()).tolist())
+            for i in range(1, ret)
+        ]
+        import_labelme.write(out, segments, args.ortho)
+    else:
+        raise Exception("Unsupported output file format.")
+
 
 print('loading orthomosaic')
 img = cv.imread(args.ortho)
@@ -138,19 +162,7 @@ if args.map is not None:
 
 print('writing to desired output files')
 # should we save the segments as a mask or as bounding boxes?
-if args.out.endswith('.npy'):
-    np.save(args.out, markers)
-elif args.out.endswith('.json'):
-    # import extra required modules
-    from imantics import Mask
-    import import_labelme
-    segments = [
-        (int(i), Mask(markers == i).polygons().points[0].tolist())
-        for i in filter(lambda x: x, np.unique(markers))
-    ]
-    import_labelme.write(args.out, segments, args.ortho)
-else:
-    sys.exit("Unsupported output file format.")
+export_results(ret, markers, args.out)
 
 # also create the map file if the user requested it
 if args.map is not None:
