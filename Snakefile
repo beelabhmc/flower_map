@@ -99,6 +99,8 @@ rule transform:
         lambda wildcards: rules.segment.output.high if wildcards.confidence == 'high' else rules.segment.output.low
     output:
         config['out']+"/{sample}/transforms/{confidence}/{image}.json"
+    wildcard_constraints:
+        confidence="(high|low)"
     conda: "envs/default.yml"
     shell:
         "scripts/transform.py {input} {output}"
@@ -113,7 +115,7 @@ def transformed_segments(wildcards, confidence='high'):
         confidence=confidence,
         image=list(
             map(
-                lambda i: i[:-len(SAMP_EXT[wildcards.sample][0])],
+                lambda i: Path(i).stem,
                 SAMP_EXT[wildcards.sample][1]
             )
         )
