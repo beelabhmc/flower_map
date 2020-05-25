@@ -30,9 +30,12 @@ if not (
 import features
 import cv2 as cv
 import numpy as np
-# from test_util import * # uncomment for testing
-# import matplotlib.pyplot as plt # uncomment for testing
-# plt.ion() # uncomment for testing
+import scipy.ndimage
+
+# # uncomment this stuff for testing
+# from test_util import *
+# import matplotlib.pyplot as plt
+# plt.ion()
 
 
 # CONSTANTS
@@ -40,16 +43,30 @@ PARAMS = {
     'texture': {
         'window_radius': 2,
         'num_features': 6,
-        'inverse_resolution': 30,
-        'threshold': 1300,
-        'closing': {
-            'struct_element_size': 16,
-            'iterations': 4
-        },
-        'opening': {
-            'struct_element_size': 31,
-            'iterations': 2
-        }
+        'inverse_resolution': 30
+    },
+    'blur': {
+        'green_kernel_size': 5,
+        'green_strength': 60,
+        'contrast_kernel_size': 24
+    },
+    'combine': {
+        'green_weight': 0.75,
+        'contrast_weight': 0.25
+    },
+    'noise_removal': {
+        'strength': 17,
+        'templateWindowSize': 7,
+        'searchWindowSize': 21
+    },
+    'threshold': 0.53,
+    'morho': {
+        'big_kernel_size': 24,
+        'small_kernel_size': 5,
+        'closing1': 7,
+        'opening1': 4,
+        'closing2': 18,
+        'opening2': 3
     }
 }
 
@@ -74,6 +91,20 @@ def sliding_window(img, fnctn, size, num_features=1, skip=0):
             # call the function
             new[i:next_i,j:next_j,:] = fnctn(img[i1:i2,j1:j2])
     return new
+
+def green_contrast(
+    green, contrast, green_weight=PARAMS['combine']['green_weight'],
+    contrast_weight=PARAMS['combine']['contrast_weight']
+):
+    """ take a weighted average of the green and contrast values for each pixel """
+    # normalize the weights, just in case they don't already add to 1
+    total = green_weight + contrast_weight
+    green_weight /= total
+    contrast_weight /= total
+    # normalize the green and contrast values
+    green = green / np.max(green)
+    contrast = contrast / np.max(contrast)
+    return ((1-green)*green_weight) + (contrast*contrast_weight)
 
 def largest_polygon(polygons):
     """ get the largest polygon among the polygons """
@@ -109,32 +140,51 @@ if True:
     texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
 else:
     texture = np.load("temp/texture.npy")
-thresh_contrast = cv.threshold(texture[:,:,0], PARAMS['texture']['threshold'], 255, cv.THRESH_BINARY)[1]
 
-print('performing morphological operations to remove noise from texture')
-thresh_contrast_closing = cv.morphologyEx(thresh_contrast, cv.MORPH_CLOSE, np.ones((PARAMS['texture']['closing']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['closing']['iterations'])
-thresh_contrast_opening = cv.morphologyEx(thresh_contrast_closing, cv.MORPH_OPEN, np.ones((PARAMS['texture']['opening']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['opening']['iterations'])
+# blur image to remove noise from grass
+print('blurring image to remove noise in the green and contrast values')
+blur_green = cv.GaussianBlur(img, (PARAMS['blur']['green_kernel_size'],)*2, PARAMS['blur']['green_strength'])
+blur_contrast = cv.blur(texture[:,:,0], (PARAMS['blur']['contrast_kernel_size'],)*2)
 
-# blur image to remove noise from flowers
-print('blurring image to remove noise')
-blur = cv.GaussianBlur(img,(5,5),60)
+print('combining green and contrast values and removing more noise')
+combined = np.uint8(green_contrast(blur_green[:,:,1], blur_contrast) * 255)
+combined = cv.fastNlMeansDenoising(
+    combined, None, PARAMS['noise_removal']['strength'],
+    PARAMS['noise_removal']['templateWindowSize'], PARAMS['noise_removal']['searchWindowSize']
+)
 
-print('creating thresholded matrix')
-# hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
-# order of colors is blue, green, red
-thresh_green_orig = cv.bitwise_not(cv.inRange(blur, (0, 92, 0), (255, 255, 255)))
+print('performing greyscale morphological closing')
+combined = scipy.ndimage.grey_closing(combined, size=(PARAMS['morho']['big_kernel_size'],)*2)
 
-thresh_green = np.logical_or(thresh_contrast_opening, thresh_green_orig).astype(np.float)*255
+print('thresholding')
+thresh = (combined > (PARAMS['threshold'] * 255)) * np.uint8(255)
+# use the fill_holes method to boost background pixels that are surrounded by foreground
+filled = scipy.ndimage.binary_fill_holes(thresh) * np.uint8(255)
 
 # noise removal
-print('performing morphological operations to remove noise from green')
-opening1 = cv.morphologyEx(thresh_green,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 1)
-closing1 = cv.morphologyEx(opening1, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 5)
-confident= cv.morphologyEx(closing1,cv.MORPH_OPEN, np.ones((6,6),np.uint8), iterations = 18)
-opening = cv.morphologyEx(closing1, cv.MORPH_OPEN, np.ones((3,3),np.uint8), iterations = 5)
-closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 20)
+print('performing morphological operations')
+small_kernel = np.ones((PARAMS['morho']['small_kernel_size'],)*2, np.uint8)
+big_kernel = np.ones((PARAMS['morho']['big_kernel_size'],)*2, np.uint8)
+closing1 = cv.morphologyEx(
+    filled, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['closing1']
+)
+filled1 = scipy.ndimage.binary_fill_holes(closing1) * np.uint8(255)
+opening1 = cv.morphologyEx(
+    filled1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['opening1']
+)
+closing = cv.morphologyEx(
+    opening1, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['closing2']
+)
 
-# plot_img(create_arr([img, opening1, closing1, confident, opening, closing], 2, 3), close=True)
+confident= cv.morphologyEx(
+    opening1, cv.MORPH_OPEN, big_kernel, iterations = PARAMS['morho']['opening2']
+)
+
+# # uncomment this stuff for testing
+# plot_img(([
+#     img, thresh, filled, closing1,
+#     filled1, opening1, closing, confident
+# ], 2, 4), close=True)
 
 # save the resulting masks to files
 print('writing resulting masks to output files')

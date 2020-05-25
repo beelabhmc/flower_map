@@ -20,8 +20,7 @@ sample_file: data/samples.tsv
 
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
-# SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
-SAMP_NAMES: [test2]
+SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
 
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
