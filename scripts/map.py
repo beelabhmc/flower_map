@@ -14,6 +14,9 @@ parser.add_argument(
 parser.add_argument(
     "predicts", nargs="?", const=None, help="the path to the file containing the true and predicted class labels"
 )
+parser.add_argument(
+    "--spectrum", action='store_true', help="show predictions on an opacity spectrum where opaque segments are those we are more confident about"
+)
 args = parser.parse_args()
 
 import cv2 as cv
@@ -50,7 +53,8 @@ def get_color(predicts, i, unique = False):
         return [
             col*255
             for col in plt.cm.Dark2(class_label)[:-1] + (
-                handle_label(i)["prob."+str(class_label)],
+                0.5*(handle_label(i)["prob."+str(class_label)]+1)
+                if args.spectrum else 1.0,
             )
         ]
     else:
