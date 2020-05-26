@@ -17,13 +17,13 @@ def exp_str():
     """ return the prefix str for the experimental strategy """
     return "-exp" if check_config('parallel') else ""
 
-def read_samples():
+def read_samples(sample_file):
     """Function to get names and paths from a sample file
     specified in the configuration. Input file is expected to have 2
     columns: <unique_sample_id> <data_path>. Modify
     this function as needed to provide a dictionary of sample_id keys and
     data_paths values"""
-    f = open(config['sample_file'], "r")
+    f = open(sample_file, "r")
     samp_dict = {}
     samp_exts = {}
     for line in f:
@@ -37,7 +37,7 @@ def read_samples():
         ]
         samp_exts[words[0]] = (words[2], images)
     return samp_dict, samp_exts
-SAMP, SAMP_EXT = read_samples()
+SAMP, SAMP_EXT = read_samples(config['sample_file'])
 
 # the user can change config['SAMP_NAMES'] here (or define it in the config
 # file) to contain whichever sample names they'd like to run the pipeline on
