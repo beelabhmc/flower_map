@@ -18,6 +18,12 @@ parser.add_argument(
     "-m", "--map", default=None, help="a json file in which to store a dictionary mapping the labels of the original segmented regions to their corresponding merged labels in the orthomosaic; the original segments are labeled by their file name"
 )
 parser.add_argument(
+    "--high-out", default=None, help="a file in which to write the new, merged high segments; default is not to do so"
+)
+parser.add_argument(
+    "--low-out", default=None, help="a file in which to write the new, merged low segments; default is not to do so"
+)
+parser.add_argument(
     "out", help="the path to the final segmented regions produced by running the watershed algorithm"
 )
 args = parser.parse_args()
@@ -101,7 +107,7 @@ def export_results(ret, markers, out):
         import import_labelme
         segments = [
             (int(i), largest_polygon(Mask(markers == i).polygons()).tolist())
-            for i in range(1, ret)
+            for i in (range(1, ret) if ret is not None else np.unique(markers).astype(int))
         ]
         import_labelme.write(out, segments, args.ortho)
     else:
@@ -118,6 +124,11 @@ for high_file, low_file in zip(args.high, args.low):
     pts[high_file.stem], high, low = load_segments(str(high_file), str(low_file), high, low, img.shape[:2])
 # convert to uint8
 high, low = high.astype(np.uint8), low.astype(np.uint8)
+# write to temporary output files, if desired
+if args.high_out is not None:
+    export_results(*cv.connectedComponents(high), args.high_out)
+if args.low_out is not None:
+    export_results(*cv.connectedComponents(low), args.low_out)
 
 # Finding unknown region
 print('identifying unknown regions (those not classified as either foreground or background)')
