@@ -339,8 +339,6 @@ if __name__ == '__main__':
 
     doc = create_doc(args.images, args.ext)
 
-    exit()
-
     # Initialising listing chunks
     chunk_list = doc.chunks
         

@@ -17,6 +17,9 @@ parser.add_argument(
 parser.add_argument(
     "--spectrum", action='store_true', help="show predictions on an opacity spectrum where opaque segments are those we are more confident about"
 )
+parser.add_argument(
+    "--unique", action='store_true', help="make every segment a different color"
+)
 args = parser.parse_args()
 
 import cv2 as cv
@@ -60,7 +63,7 @@ def get_color(predicts, i, unique = False):
     else:
         # light gray
         if unique:
-            return plt.cm.Greys(i/unique)
+            return plt.cm.Greys(i/unique*100)
         else:
             return [211,211,211,255]
 
@@ -82,6 +85,7 @@ if args.segments.endswith('.json'):
             cv.drawContours(img, labels, i, get_color(predicts, i), 7)
 elif args.segments.endswith('.npy'):
     markers = np.load(args.segments)
+    assert markers.shape == img.shape[:-1], "The provided img has size "+str(markers.shape)+", while the coordinate mask has size "+str(img.shape[:-1])
     # first, get the marker IDs (ie 0, 1, 2, ...)
     marker_ids = np.unique(markers)
     # next, ignore the marker id for the background (ie 0)
@@ -89,7 +93,7 @@ elif args.segments.endswith('.npy'):
     # draw each segment onto the image
     for i in range(len(marker_ids)):
         marker = marker_ids[i]
-        color = get_color(predicts, i, max(marker_ids))
+        color = get_color(predicts, i, max(marker_ids) if args.unique else False)
         # get a colored mask with which to overlay the segmented region
         overlay = np.ones(img.shape, dtype=np.float32)*color
         # also construct a regular mask containing the transparency values
