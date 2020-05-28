@@ -15,10 +15,14 @@ parser.add_argument(
     "predicts", nargs="?", const=None, help="the path to the file containing the true and predicted class labels"
 )
 parser.add_argument(
-    "--spectrum", action='store_true', help="show predictions on an opacity spectrum where opaque segments are those we are more confident about"
+    "--spectrum", action='store_true', help=
+    """
+        if --predicts is provided, show predictions on an opacity spectrum where
+        opaque segments are those we are more confident about
+    """
 )
 parser.add_argument(
-    "--unique", action='store_true', help="make every segment a different color"
+    "--unique", action='store_true', help="if segments is an npy file, make every segment a different shade of grey"
 )
 args = parser.parse_args()
 
