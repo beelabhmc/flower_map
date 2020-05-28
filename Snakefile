@@ -84,13 +84,15 @@ rule segment:
     """ segment plants from an image into high and low confidence regions"""
     input:
         lambda wildcards: SAMP[wildcards.sample]+"/"+wildcards.image+SAMP_EXT[wildcards.sample][0] if check_config('parallel') else rules.export_ortho.output
+    params:
+        texture = "--texture-cache " + config['out']+"/{sample}/segments/texture/{image}.npy" if check_config('parallel') else config['out']+"/{sample}/segments/texture.npy"
     output:
         high = config['out']+"/{sample}/segments/high/{image}.json" if check_config('parallel') else config['out']+"/{sample}/segments/high.json",
         low = config['out']+"/{sample}/segments/low/{image}.json" if check_config('parallel') else config['out']+"/{sample}/segments/low.json"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/segments/"+("{image}" if check_config('parallel') else "ortho")+".tsv"
     shell:
-        "scripts/segment.py {input} {output}"
+        "scripts/segment.py {params} {input} {output}"
 
 rule transform:
     """ transform the segments from the ortho to each image """
