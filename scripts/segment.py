@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 
 parser = argparse.ArgumentParser(
     description=
@@ -19,6 +20,14 @@ parser.add_argument(
 )
 parser.add_argument(
     "out_low", help="the path to a file in which to store the coordinates of each extracted low confidence object"
+)
+parser.add_argument(
+    "--texture-cache", type=Path, help=
+    """
+        The path to an npy file containing the texture of the image if already calculated.
+        (Providing this option can speed up repeated executions of this script on the same input.)
+        If this file does not exist, it will be created when the texture is calculated.
+    """
 )
 args = parser.parse_args()
 if not (
@@ -134,12 +143,17 @@ def export_results(mask, out):
 print('loading image')
 img = cv.imread(args.image)
 
-print('calculating textures (this may take a while)')
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-if True:
-    texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
+if args.texture_cache is not None and args.texture_cache.exists():
+    print('loading texture from cached file')
+    texture = np.load(args.texture_cache)
 else:
-    texture = np.load("temp/texture.npy")
+    print('calculating texture (this may take a while)')
+    texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
+    if args.texture_cache is not None:
+        args.texture_cache.parents[0].mkdir(parents=True, exist_ok=True)
+        np.save(args.texture_cache, texture)
+
 
 # blur image to remove noise from grass
 print('blurring image to remove noise in the green and contrast values')
