@@ -75,15 +75,15 @@ def import_segments(file):
 
 print("Points\tCoordinates", file=args.out)
 if args.points is None:
-    print("0,0\t{0},{1}".format(chunk.orthomosaic.top, chunk.orthomosaic.left), file=args.out)
+    print("{0},{1}\t{2},{3}".format(0, 0, chunk.orthomosaic.top, chunk.orthomosaic.left), file=args.out)
     print("{0},{1}\t{2},{3}".format(chunk.orthomosaic.width, chunk.orthomosaic.height, chunk.orthomosaic.bottom, chunk.orthomosaic.right), file=args.out)
 else:
     if Path(args.points).is_file():
         args.points = import_segments(args.points)
     else:
         args.points = [
-            tuple(float(i) for i in pt.split(','))
+            tuple(int(i) for i in pt.split(','))
             for pt in args.points.split(' ')
         ]
     for pt in args.points:
-        print("{0}\t{1}".format(pt, coord_pt(chunk, pt)), file=args.out)
+        print("{0},{1}\t{2},{3}".format(*pt, *coord_pt(chunk, pt)), file=args.out)
