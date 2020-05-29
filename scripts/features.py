@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import cv2
 import numpy as np
 from colorsys import *
 import matplotlib as mpl
