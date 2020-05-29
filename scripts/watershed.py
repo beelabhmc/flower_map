@@ -43,11 +43,14 @@ if not (len(args.high) == len(args.low) and len(args.high) and args.out.endswith
 import json
 import cv2 as cv
 import numpy as np
+import scipy.ndimage
 import import_labelme
 from imantics import Polygons
-#from test_util import * # uncomment for testing
-# import matplotlib.pyplot as plt # uncomment for testing
-# plt.ion() # uncomment for testing
+
+# uncomment this stuff for testing
+from test_util import *
+import matplotlib.pyplot as plt
+plt.ion()
 
 
 def import_segments(file, img_shape=cv.imread(args.ortho)[-2::-1], pts=True):
@@ -83,11 +86,11 @@ def load_segments(high, low, high_all=None, low_all=None, img_shape=cv.imread(ar
     low_segs = import_segments(low, img_shape[::-1], False)
     # create the high and low cumulative arrays if they don't exist yet
     if high_all is None:
-        high_all = np.zeros(img_shape, dtype=bool)
+        high_all = np.zeros(img_shape, dtype=np.uint8)
     if low_all is None:
-        low_all = np.zeros(img_shape, dtype=bool)
+        low_all = np.zeros(img_shape, dtype=np.uint8)
     # now merge the segments with the cumulative high and low masks
-    return pts, np.logical_or(high_all, high_segs), np.logical_or(low_all, low_segs)
+    return pts, np.add(high_all, high_segs), np.add(low_all, low_segs)
 
 def largest_polygon(polygons):
     """ get the largest polygon among the polygons """
@@ -120,10 +123,25 @@ img = cv.imread(args.ortho)
 print('loading segments')
 high, low = None, None
 pts = {cam.stem:None for cam in args.high}
+# load each segment and add its values to the values we already have
 for high_file, low_file in zip(args.high, args.low):
     pts[high_file.stem], high, low = load_segments(str(high_file), str(low_file), high, low, img.shape[:2])
-# convert to uint8
-high, low = high.astype(np.uint8), low.astype(np.uint8)
+    # convert the merged high and low matrices into the appropriate datatypes
+high = high.astype(np.float32)
+low = np.uint8(low != 0)
+
+print('processing segments')
+# the high-confidence segments that we have right now are arrays of integers
+# high integers represent pixels that we are highly confident contain plants
+# we use the following algorithm to convert this array to a boolean mask:
+# 1) first, extract the connected components of the largest possible segments
+high_ret, high_mask = cv.connectedComponents(np.uint8(high != 0))
+# 2) normalize the values within each segment by their mean
+for seg in range(1, high_ret):
+    high[high_mask == seg] /= np.mean(high[high_mask == seg])
+# 3) threshold the high confidence regions to convert them to a bool mask
+high = np.uint8(high > 1)
+
 # write to temporary output files, if desired
 if args.high_out is not None:
     export_results(*cv.connectedComponents(high), args.high_out)
@@ -139,10 +157,11 @@ unknown = cv.subtract(low, high)
 # Marker labelling
 print('marking connected components')
 ret, markers = cv.connectedComponents(high)
+
 # Add one to all labels so that sure background is not 0, but 1
 markers = markers+1
 # Now, mark the region of unknown with zero
-markers[unknown==255] = 0
+markers[unknown==1] = 0
 
 print('running the watershed algorithm')
 markers = cv.watershed(img,markers)

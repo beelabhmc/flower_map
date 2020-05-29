@@ -75,7 +75,7 @@ PARAMS = {
         'closing1': 7,
         'opening1': 4,
         'closing2': 18,
-        'opening2': 3
+        'opening2': 15
     }
 }
 
@@ -191,7 +191,7 @@ closing = cv.morphologyEx(
 )
 
 confident= cv.morphologyEx(
-    opening1, cv.MORPH_OPEN, big_kernel, iterations = PARAMS['morho']['opening2']
+    opening1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['opening2']
 )
 
 # # uncomment this stuff for testing
