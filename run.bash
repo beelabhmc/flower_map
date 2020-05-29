@@ -18,7 +18,7 @@ test "$1" = "noclobber" && shift
 # 	2) qlog - a more detailed log of the progress of each rule and any errors
 
 # you can specify a directory for all output here:
-out_path="$PWD/out"
+out_path="out"
 mkdir -p "$out_path"
 
 # clear leftover log files
@@ -30,6 +30,12 @@ if [ -f "${out_path}/qlog" ]; then
 fi
 
 # make sure that this script is executed from the directory that it lives in!
+
+# also, make sure this script is being executed in the correct snakemake environment!
+if [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
+	echo "Switching to snakemake environment." > "${out_path}/log"
+	conda activate snakemake
+fi
 
 # Before running this snakemake pipeline, remember to complete the config file
 # with the required input info. In particular, make sure that you have created
