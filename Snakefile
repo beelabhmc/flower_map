@@ -215,6 +215,18 @@ rule resolve_conflicts:
     shell:
         "scripts/resolve_conflicts.py {input.img} {input.labels} {params.predicts} {output}"
 
+rule segments_map:
+    """ overlay each segment back onto the orthomosaic img to create a map """
+    input:
+        img = rules.export_ortho.output,
+        labels = rules.watershed.output
+    output:
+        config['out']+"/{sample}/segments-map"+exp_str()+".tiff"
+    conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/segments-map"+exp_str()+".tsv"
+    shell:
+        "scripts/map.py {input.img} {input.labels} {output}"
+
 rule map:
     """ overlay each segment and its predicted species back onto the orthomosaic img to create a map """
     input:

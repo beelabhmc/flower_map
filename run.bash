@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -t 1
-#$ -S /bin/bash
 #$ -V
+#$ -S /bin/bash
 #$ -j y
 #$ -cwd
 #$ -o /dev/null
@@ -32,17 +32,17 @@ fi
 # make sure that this script is executed from the directory that it lives in!
 
 # also, make sure this script is being executed in the correct snakemake environment!
-if [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
-	echo "Switching to snakemake environment." > "${out_path}/log"
-	conda activate snakemake
-fi
+# if [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
+# 	conda activate snakemake
+# 	echo "Switched to snakemake environment." > "${out_path}/log"
+# fi
 
 # Before running this snakemake pipeline, remember to complete the config file
 # with the required input info. In particular, make sure that you have created
 # a samples.tsv file specifying paths to your drone imagery.
 
 snakemake \
---cluster "qsub -t 1 -V -S /bin/bash -j y -o ${out_path}/qlog" \
+--cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o ${out_path}/qlog" \
 -j 12 \
 --config out="${out_path}" \
 --latency-wait 60 \
