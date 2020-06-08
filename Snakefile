@@ -160,7 +160,7 @@ checkpoint rev_transform:
 rule extract_features:
     """ extract feature values for each segment """
     input:
-        lambda wildcards: SAMP[wildcards.sample]+"/{image}.JPG" if check_config('parallel') else rules.export_ortho.output,
+        lambda wildcards: SAMP[wildcards.sample]+"/{image}"+SAMP_EXT[wildcards.sample][0] if check_config('parallel') else rules.export_ortho.output,
         rules.rev_transform.output[0]+"/{image}.json" if check_config('parallel') else rules.watershed.output
     output:
         config['out']+"/{sample}/features"+exp_str()+"/{image}.tsv"

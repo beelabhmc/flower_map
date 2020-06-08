@@ -39,7 +39,7 @@ parallel: true
 # the value of the 'parallel' config option (see above).
 low_qual_ortho: null
 
-# Whether to tune the hyparameters of the classifier when traning it
+# Whether to tune the hyparameters of the classifier when training it
 # Enabling this option will significantly increase the running time of the pipeline
 tune: false
 
