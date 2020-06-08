@@ -31,7 +31,7 @@ from PIL import Image
 # from matplotlib import pyplot as plt
 
 
-THRESHOLD = 0.67
+THRESHOLD = 0.5
 Image.MAX_IMAGE_PIXELS = None # so that PIL doesn't complain when we open large files
 
 

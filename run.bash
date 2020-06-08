@@ -31,7 +31,7 @@ fi
 
 # make sure that this script is executed from the directory that it lives in!
 
-# also, make sure this script is being executed in the correct snakemake environment!
+# # also, make sure this script is being executed in the correct snakemake environment!
 # if [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
 # 	conda activate snakemake
 # 	echo "Switched to snakemake environment." > "${out_path}/log"
