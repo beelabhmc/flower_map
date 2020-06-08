@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(
         Segment the image into objects and output both 1) contours which we are
         highly confident have plants and 2) contours which we have less
         confidence contain plants (where the contours from #1 are contained
-        within the regions outlined by #2). You can run watershed with #1 and
+        within the regions outlined by #2). You can run watershed.py with #1 and
         #2 to get the resulting contours.
     """
 )
@@ -68,14 +68,22 @@ PARAMS = {
         'templateWindowSize': 7,
         'searchWindowSize': 21
     },
-    'threshold': 0.53,
+    'threshold': {
+        'high': 0.53,
+        'low': 0.53-0.07,
+    },
     'morho': {
         'big_kernel_size': 24,
         'small_kernel_size': 5,
-        'closing1': 7,
-        'opening1': 4,
-        'closing2': 18,
-        'opening2': 15
+        'high': {
+            'closing': 7,
+            'opening': 4+15
+        },
+        'low': {
+            'closing': 7,
+            'opening': 4+7,
+            'closing2': 14
+        }
     }
 }
 
@@ -171,36 +179,49 @@ print('performing greyscale morphological closing')
 combined = scipy.ndimage.grey_closing(combined, size=(PARAMS['morho']['big_kernel_size'],)*2)
 
 print('thresholding')
-thresh = (combined > (PARAMS['threshold'] * 255)) * np.uint8(255)
-# use the fill_holes method to boost background pixels that are surrounded by foreground
-filled = scipy.ndimage.binary_fill_holes(thresh) * np.uint8(255)
+thresh_high = (combined > (PARAMS['threshold']['high'] * 255)) * np.uint8(255)
+# use a lower threshold to create the low confidence regions, so that they are larger
+thresh_low = (combined > (PARAMS['threshold']['low'] * 255)) * np.uint8(255)
 
 # noise removal
-print('performing morphological operations')
+print('performing morphological operations and hole filling')
+# first, create the kernels we use in the morpho operations
 small_kernel = np.ones((PARAMS['morho']['small_kernel_size'],)*2, np.uint8)
 big_kernel = np.ones((PARAMS['morho']['big_kernel_size'],)*2, np.uint8)
-closing1 = cv.morphologyEx(
-    filled, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['closing1']
+# Now, we do morpho operations and hole filling to get the high confidence regions:
+# 1) use the fill_holes method to boost background pixels that are surrounded by foreground
+filled = scipy.ndimage.binary_fill_holes(thresh_high) * np.uint8(255)
+# 2) use closing to boost the size of the regions even more before step 4
+closing_high = cv.morphologyEx(
+    filled, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['high']['closing']
 )
-filled1 = scipy.ndimage.binary_fill_holes(closing1) * np.uint8(255)
-opening1 = cv.morphologyEx(
-    filled1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['opening1']
+# 3) use fill_holes one more time, just in case there's anything else that needs filling
+filled1 = scipy.ndimage.binary_fill_holes(closing_high) * np.uint8(255)
+# 4) use a lot of morphological opening to keep only the regions that we are highly confident contain plants
+high = cv.morphologyEx(
+    filled1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['high']['opening']
 )
-closing = cv.morphologyEx(
-    opening1, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['closing2']
+# Now, we do morpho operations to get the low confidence regions:
+# 1) use closing to boost the size of some of the plants that have a lot of foreground mixed in
+closing_low = cv.morphologyEx(
+    thresh_low, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['low']['closing']
 )
-
-confident= cv.morphologyEx(
-    opening1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['opening2']
+# 2) use opening to get rid of the noise
+opening_low = cv.morphologyEx(
+    closing_low, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['low']['opening']
+)
+# 3) use closing again to mostly undo the effects of the opening from before and create low-confidence regions
+low = cv.morphologyEx(
+    opening_low, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['low']['closing2']
 )
 
 # # uncomment this stuff for testing
 # plot_img(([
-#     img, thresh, filled, closing1,
-#     filled1, opening1, closing, confident
+#     img, thresh_high, closing_high, high,
+#     low, thresh_low, closing_low, opening_low
 # ], 2, 4), close=True)
 
 # save the resulting masks to files
 print('writing resulting masks to output files')
-export_results(confident, args.out_high)
-export_results(closing, args.out_low)
+export_results(high, args.out_high)
+export_results(low, args.out_low)
