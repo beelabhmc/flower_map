@@ -15,14 +15,17 @@ parser.add_argument(
     "predicts", nargs="?", const=None, help="the path to the file containing the true and predicted class labels"
 )
 parser.add_argument(
-    "--spectrum", action='store_true', help=
+    "-s", "--spectrum", action='store_true', help=
     """
-        if --predicts is provided, show predictions on an opacity spectrum where
+        if 'predicts' is provided, show predictions on an opacity spectrum where
         opaque segments are those we are more confident about
     """
 )
 parser.add_argument(
-    "--unique", action='store_true', help="if segments is an npy file, make every segment a different shade of grey"
+    "-u", "--unique", action='store_true', help="if segments is an npy file, make every segment a different shade of grey"
+)
+parser.add_argument(
+    "-l", "--label", action='store_true', help="label each segment in the map"
 )
 args = parser.parse_args()
 
@@ -71,6 +74,20 @@ def get_color(predicts, i, unique = False):
         else:
             return [211,211,211,255]
 
+def top_right_corner(points, reverse=False):
+    """ retrieve the top, right (or bottom, left) point from a list of points """
+    # get the topmost and rightmost coordinates
+    if reverse:
+        top = np.min(points[:,0])
+        right = np.max(points[:,1])
+    else:
+        top = np.max(points[:,0])
+        right = np.min(points[:,1])
+    # see https://codereview.stackexchange.com/a/28210
+    deltas = points - (top, right)
+    dist_2 = np.einsum('ij,ij->i', deltas, deltas)
+    return tuple(points[np.argmin(dist_2)])
+
 # if the data is from labelme, import it using the labelme importer
 if args.segments.endswith('.json'):
     import import_labelme
@@ -82,11 +99,21 @@ if args.segments.endswith('.json'):
         # draw each label onto the img
         for i in range(len(labels)):
             cv.drawContours(img, labels, i, get_color(predicts, label_keys[i]), 7)
+            if args.label:
+                # first, get the top, right corner of the polygon
+                # and use it as the bottom left, corner of the text
+                bottom_left = top_right_corner(labels[i])
+                cv.putText(img, str(label_keys[i]), bottom_left, cv.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6, cv.LINE_AA)
     else:
         labels = [np.array(segment).astype(np.int32) for segment in import_labelme.main(args.segments, False, img.shape[-2::-1])]
         # draw each label onto the img
         for i in range(len(labels)):
             cv.drawContours(img, labels, i, get_color(predicts, i), 7)
+            if args.label:
+                # first, get the top, right corner of the polygon
+                # and use it as the bottom left, corner of the text
+                bottom_left = top_right_corner(labels[i])
+                cv.putText(img, str(i), bottom_left, cv.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6, cv.LINE_AA)
 elif args.segments.endswith('.npy'):
     markers = np.load(args.segments)
     assert markers.shape == img.shape[:-1], "The provided img has size "+str(markers.shape)+", while the coordinate mask has size "+str(img.shape[:-1])
@@ -105,6 +132,11 @@ elif args.segments.endswith('.npy'):
         mask[markers == marker] = (1-TRANSPARENCY,)*4
         # put the colored mask on top of the image
         img = overlay*mask + img*(1-mask)
+        if args.label:
+            # first, get the top, right corner of the mask
+            # and use it as the bottom left, corner of the text
+            bottom_left = top_right_corner(np.argwhere(markers == marker), True)
+            cv.putText(img, str(marker), bottom_left[::-1], cv.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6, cv.LINE_AA)
 else:
     raise Exception('label format not supported yet')
 
