@@ -5,12 +5,14 @@ dependencies:
   - python=3
   - matplotlib
   - conda-forge::opencv>=4.1.0
+  - main::gnutls==3.6.5
   - numpy
   - pandas
   - scikit-learn
   - labelme
-# - scipy
   - conda-forge::imantics
+  - conda-forge::coreutils==8.31
+  - conda-forge::gawk==5.1.0
   - pip
   - pip:
     - http://download.agisoft.com/Metashape-1.5.5-cp35.cp36.cp37-abi3-linux_x86_64.whl
