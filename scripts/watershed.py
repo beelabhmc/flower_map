@@ -77,7 +77,7 @@ def import_segments(file, img_shape=cv.imread(args.ortho)[-2::-1], pts=True):
             pts = {}
     else:
         raise Exception('Unsupported input file format.')
-    return (pts, segments) if pts else segments
+    return (pts, segments) if type(pts) is dict else segments
 
 def load_segments(high, low, high_all=None, low_all=None, img_shape=cv.imread(args.ortho)[:2]):
     """ load the segments and merge them with a cumulative OR of the segments """
@@ -154,7 +154,7 @@ print('identifying unknown regions (those not classified as either foreground or
 # regions are contained within low confidence ones
 unknown = cv.subtract(low, high)
 
-# Marker labelling
+# Marker labeling
 print('marking connected components')
 ret, markers = cv.connectedComponents(high)
 
@@ -172,7 +172,6 @@ markers -= 1
 
 if args.map is not None:
     # a data structure for mapping drone image segments to orthomosaic segments
-    # will be useful for resolving conflicts later:
     # dictionary:
     #   key: a camera name
     #   value:
@@ -191,7 +190,6 @@ if args.map is not None:
             pts[cam][label] = str(markers[pts[cam][label]])
 
 print('writing to desired output files')
-# should we save the segments as a mask or as bounding boxes?
 export_results(ret, markers, args.out)
 
 # also create the map file if the user requested it
