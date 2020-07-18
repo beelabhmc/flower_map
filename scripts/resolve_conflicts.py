@@ -98,7 +98,7 @@ print('loading classification predictions')
 # first, get a list of the classification files, sorted by their names
 predicts = sorted([f for f in os.listdir(args.predicts) if f.endswith('.tsv')])
 # check that there are an equal number of segments and predicts
-assert len(segments) == len(predicts), "There are an unequal number of files in the segments dir than in the predicts dir."
+assert len(segments) >= len(predicts), "There are less camera files in the segments dir than in the predicts dir."
 # import them as a single large, multi-indexed pandas dataframe
 predicts = pd.concat(
     {

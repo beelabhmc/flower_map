@@ -116,7 +116,7 @@ rule segment:
     input:
         lambda wildcards: SAMP[wildcards.sample]+"/"+wildcards.image+SAMP_EXT[wildcards.sample][0] if check_config('parallel') else rules.export_ortho.output
     params:
-        texture = "--texture-cache " + config['out']+"/{sample}/segments/texture/{image}.npy" if check_config('parallel') else config['out']+"/{sample}/segments/texture.npy"
+        texture = "--texture-cache " + (config['out']+"/{sample}/segments/texture/{image}.npy" if check_config('parallel') else config['out']+"/{sample}/segments/texture.npy")
     output:
         high = config['out']+"/{sample}/segments/high/{image}.json" if check_config('parallel') else config['out']+"/{sample}/segments/high.json",
         low = config['out']+"/{sample}/segments/low/{image}.json" if check_config('parallel') else config['out']+"/{sample}/segments/low.json"
@@ -310,7 +310,7 @@ def classify_or_test(wildcards, return_int=False):
     if i:
         classify_rule = rules.test
     # return tuple if return_int else return classify_rule
-    return (classify_rule, i)[:return_int+1]
+    return (classify_rule, i) if return_int else classify_rule
 
 def classified_images(wildcards):
     """ get paths to the classified images """

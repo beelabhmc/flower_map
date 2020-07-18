@@ -43,6 +43,8 @@ if args.predicts is not None:
     predicts = pd.read_csv(args.predicts, sep="\t", header=0, index_col=False)
     if 'label' in predicts.columns:
         predicts = pd.read_csv(args.predicts, sep="\t", header=0, index_col='label')
+    else:
+    	predicts = pd.read_csv(args.predicts, sep="\t", header=0, index_col=0)
 else:
     predicts = None
 

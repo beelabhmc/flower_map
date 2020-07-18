@@ -140,7 +140,7 @@ high_ret, high_mask = cv.connectedComponents(np.uint8(high != 0))
 for seg in range(1, high_ret):
     high[high_mask == seg] /= np.mean(high[high_mask == seg])
 # 3) threshold the high confidence regions to convert them to a bool mask
-high = np.uint8(high > 1)
+high = np.uint8(high >= 1)
 
 # write to temporary output files, if desired
 if args.high_out is not None:
