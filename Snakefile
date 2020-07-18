@@ -1,10 +1,11 @@
 import os
+import warnings
 from pathlib import Path
 from collections import Counter
 from snakemake.utils import min_version
 
 ##### set minimum snakemake version #####
-min_version("5.8.0")
+min_version("5.18.0")
 
 configfile: "config.yml"
 

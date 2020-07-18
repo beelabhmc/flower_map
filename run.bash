@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #$ -t 1
 #$ -V
 #$ -S /bin/bash
@@ -9,6 +9,7 @@
 
 
 # first, handle some weird behavior where sge passes the noclobber argument to the script
+# this only applies if the script is being executed from qsub on our cluster (like: qsub run.bash)
 test "$1" = "noclobber" && shift
 
 # An example bash script demonstrating how to run the entire snakemake pipeline
@@ -41,11 +42,22 @@ fi
 # with the required input info. In particular, make sure that you have created
 # a samples.tsv file specifying paths to your drone imagery.
 
-snakemake \
---cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o ${out_path}/qlog" \
--j 12 \
---config out="${out_path}" \
---latency-wait 60 \
---use-conda \
--k \
-"$@" >>"${out_path}/log" 2>&1
+# check: should we execute via qsub?
+if [[ $* == *--sge-cluster* ]]; then
+	snakemake \
+	--cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
+	--config out="$out_path" \
+	--latency-wait 60 \
+	--use-conda \
+	-k \
+	-j 12 \
+	${@//--sge-cluster/} &>"$out_path/log"
+else
+	snakemake \
+	--config out="$out_path" \
+	--latency-wait 60 \
+	--use-conda \
+	-k \
+	-j \
+	"$@" 2>"$out_path/log" >"$out_path/qlog"
+fi
