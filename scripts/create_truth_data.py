@@ -12,7 +12,7 @@ parser.add_argument(
     "truth", help="the path to a tsv file containing true class labels for each segmented region; the tsv must have no header and two columns: 1) the segment ID and 2) the class label"
 )
 parser.add_argument(
-    "out", nargs='+', help="the path to a file (or directory) in which to write the truth data; optionally, provide a file and a directory if you want the truth data split between training and testing sets"
+    "out", nargs='+', help="the path to a file (or directory) in which to write the truth data; optionally, provide another file (or directory) if you want the truth data split between training and testing sets"
 )
 parser.add_argument(
     "-d", "--segment-dict", help="the path to a json file containing a dictionary mapping the labels of the original segmented regions to their corresponding merged labels in the orthomosaic; this is output from watershed.py"
@@ -23,8 +23,9 @@ parser.add_argument(
 args = parser.parse_args()
 if len(args.out) > 2:
     parser.error("You can provide at most two outputs.")
+# but if there are two outputs, make sure the first one is a file
 if len(args.out)-1:
-    assert (not Path(args.out[0]).is_dir() and Path(args.out[1]).is_dir()), "If you provide two outputs, the first must be a file (for training) and the second a directory (for testing)"
+    assert (not Path(args.out[0]).is_dir()), "If you provide two outputs, the first must be a file (for training). The second (for testing) can be either a file or a directory if you want the output split by camera."
 
 import json
 import numpy as np
@@ -94,7 +95,12 @@ else:
     features = get_features(str(args.features))
 
     # get the true labels and add them as a column to the features df
-    features = features.merge(get_truth(add_ortho=False))
+    features = features.join(get_truth(add_ortho=False))
+
+def write_dir_output(df, out, *args):
+    """ write the test data to multiple files if the output is a directory """
+    for cam in set(df.index.get_level_values(0)):
+        df.loc[cam].to_csv(str(out)+"/"+cam+".tsv", sep="\t", *args)
 
 # check: do we have to split the output?
 if len(args.out)-1:
@@ -102,17 +108,19 @@ if len(args.out)-1:
     train, test = train_test_split(
         features, test_size=args.test_proportion, stratify=features[CLASS_LABEL]
     )
+
     # and write to the files
     # keep only the species labels and the features
     train.to_csv(args.out[0], sep="\t", index=False)
-    # and now write the test data to separate files
-    for cam in set(test.index.get_level_values(0)):
-        test.loc[cam].to_csv(str(Path(args.out[1]))+"/"+cam+".tsv", sep="\t")
+    out_file = Path(args.out[1])
+    if out_file.is_dir():
+        write_dir_output(test, out_file)
+    else:
+        test.to_csv(args.out[1], sep="\t", index=False)
 else:
-    if Path(args.out[0]).is_dir():
-        # write the test data to separate files
-        for cam in set(features.index.get_level_values(0)):
-            features.loc[cam].to_csv(str(Path(args.out[0]))+"/"+cam+".tsv", sep="\t")
+    out_file = Path(args.out[0])
+    if out_file.is_dir():
+        write_dir_output(features, out_file)
     else:
         # write to a file without the segment IDs, keeping only the species labels
         # and the features

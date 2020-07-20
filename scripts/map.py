@@ -115,7 +115,7 @@ if args.segments.endswith('.json'):
                 # first, get the top, right corner of the polygon
                 # and use it as the bottom left, corner of the text
                 bottom_left = top_right_corner(labels[i])
-                cv.putText(img, str(i), bottom_left, cv.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6, cv.LINE_AA)
+                cv.putText(img, str(i+1), bottom_left, cv.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 6, cv.LINE_AA)
 elif args.segments.endswith('.npy'):
     markers = np.load(args.segments)
     assert markers.shape == img.shape[:-1], "The provided img has size "+str(markers.shape)+", while the coordinate mask has size "+str(img.shape[:-1])

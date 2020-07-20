@@ -117,8 +117,9 @@ predicts.index.names = ['camera', 'label']
 print('resolving conflicts')
 # get the truth and probs.1 columns
 results = predicts.groupby('label').apply(resolve)
-# get the prob.0 and response columns
-results['prob.0'] = 1 - results['prob.1']
+# get the prob.0 column and add it before the prob.1 column
+results.insert(list(results.columns).index('prob.1'), 'prob.0', (1 - results['prob.1']))
+# add the response column back too
 results['response'] = (results['prob.1'] >= THRESHOLD).apply(int)
 
 # last step: write the results to the outfile

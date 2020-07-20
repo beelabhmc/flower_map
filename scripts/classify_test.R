@@ -36,7 +36,11 @@ if (names(test)[1] == "label") {
 if (!nrow(test)) {
 	# if not, handle it sepcifically
 	print(paste("warning:", test.data, "has no segments"))
-	write.table(data.frame('prob.0'=integer(), 'prob.1'=integer(), 'response'=integer()), sep="\t", quote=FALSE, na=".", output)
+	if ('species_label' %in% colnames(test)){
+		write.table(data.frame('truth'=integer(), 'prob.0'=integer(), 'prob.1'=integer(), 'response'=integer()), sep="\t", quote=FALSE, na=".", output)
+	} else {
+		write.table(data.frame('prob.0'=integer(), 'prob.1'=integer(), 'response'=integer()), sep="\t", quote=FALSE, na=".", output)
+	}
 } else {
 	# making predictions
 	print("making predictions and outputting results")

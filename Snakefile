@@ -200,15 +200,18 @@ rule extract_features:
 
 def image_features(wildcards):
     """ get paths to the classified images """
-    return expand(
-        rules.extract_features.output[0],
-        sample=wildcards.sample,
-        image=glob_wildcards(
+    images = 'ortho'
+    if check_config('parallel'):
+        images = glob_wildcards(
             os.path.join(
                 checkpoints.rev_transform.get(**wildcards).output[0],
                 "{image}.json"
             )
         ).image
+    return expand(
+        rules.extract_features.output[0],
+        sample=wildcards.sample,
+        image=images
     )
 
 checkpoint create_truth_data:
@@ -220,11 +223,11 @@ checkpoint create_truth_data:
         features = lambda wildcards, input: os.path.dirname(input.features[0]) if check_config('parallel') else input.features[0]
     output:
         directory(config['out']+"/{sample}/truth_data"+exp_str()) \
-        if check_config('model') \
+        if check_config('model') and check_config('parallel') \
         else config['out']+"/{sample}/truth_data"+exp_str()+".tsv"
     conda: "envs/default.yml"
     shell:
-        ("mkdir -p {output} && " if check_config('model') else "") + \
+        ("mkdir -p {output} && " if check_config('model') and check_config('parallel') else "") + \
         "scripts/create_truth_data.py {params.features} {input.truth} {output}"
 
 checkpoint create_split_truth_data:
@@ -236,10 +239,10 @@ checkpoint create_split_truth_data:
         features = lambda wildcards, input: os.path.dirname(input.features[0]) if check_config('parallel') else input.features[0]
     output:
         train = config['out']+"/{sample}/train"+exp_str()+"/training_data.tsv",
-        test = directory(config['out']+"/{sample}/test"+exp_str()+"/testing_data")
+        test = directory(config['out']+"/{sample}/test"+exp_str()+"/testing_data") if check_config('parallel') else config['out']+"/{sample}/test"+exp_str()+"/testing_data.tsv"
     conda: "envs/default.yml"
     shell:
-        "mkdir -p {output.test} && " + \
+        ("mkdir -p {output.test} && " if check_config('parallel') else "") + \
         "scripts/create_truth_data.py {params.features} {input.truth} {output}"
 
 def train_input(wildcards):
@@ -262,18 +265,28 @@ rule train:
 
 def classify_input(wildcards, return_int=False):
     if check_config('truth') and check_config(wildcards.sample, place=config['truth']):
+        image_ending = "/{image}.tsv" if check_config('parallel') else ''
         if check_config('train_all', place=config['truth'][wildcards.sample]):
             if return_int:
                 return 1
-            return [rules.create_truth_data.output[0]+"/{image}.tsv", rules.train.output[0]]
+            return [
+                checkpoints.create_truth_data.get(**wildcards).output[0]+image_ending,
+                rules.train.output[0]
+            ]
         if check_config('model'):
             if return_int:
                 return 2
-            return [rules.create_truth_data.output[0]+"/{image}.tsv", config['model']]
+            return [
+                checkpoints.create_truth_data.get(**wildcards).output[0]+image_ending,
+                config['model']
+            ]
         else:
             if return_int:
                 return 3
-            return [rules.create_split_truth_data.output.test+"/{image}.tsv", rules.train.output[0]]
+            return [
+                checkpoints.create_split_truth_data.get(**wildcards).output.test+image_ending,
+                rules.train.output[0]
+            ]
     else:
         if return_int:
             return 0
@@ -360,7 +373,7 @@ rule prc_pts:
     output: config['out']+"/{sample}/test"+exp_str()+"/metrics.tsv"
     conda: "envs/default.yml"
     shell:
-        "tail -n+2 {input} | cut -f 2,3,5 | scripts/metrics.py -o {output}"
+        "tail -n+2 {input} | cut -f 2,4,5 | scripts/metrics.py -o {output}"
 
 rule prc_curves:
     """ generate the points for a precision recall curve """
@@ -369,7 +382,7 @@ rule prc_curves:
     output: config['out']+"/{sample}/test"+exp_str()+"/statistics.tsv"
     conda: "envs/default.yml"
     shell:
-        "tail -n+2 {input} | cut -f 2,3 | scripts/statistics.py -o {output}"
+        "tail -n+2 {input} | cut -f 2,4 | scripts/statistics.py -o {output}"
 
 rule prc:
     """ create plot containing precision recall curves """
