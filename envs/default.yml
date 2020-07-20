@@ -1,18 +1,17 @@
 channels:
-  - anaconda
   - nodefaults
 dependencies:
-  - python=3
-  - matplotlib
-  - conda-forge::opencv>=4.1.0
+  - conda-forge::python==3.8.4
+  - anaconda::matplotlib==3.2.2
+  - conda-forge::opencv==4.3.0
   - main::gnutls==3.6.5
-  - numpy
-  - pandas
-  - scikit-learn
-  - labelme
-  - conda-forge::imantics
+  - conda-forge::numpy==1.19.0
+  - anaconda::pandas==1.0.5
+  - anaconda::scikit-learn==0.23.1
+  - conda-forge::labelme==4.5.5
+  - conda-forge::imantics==0.1.12
   - conda-forge::coreutils==8.31
   - conda-forge::gawk==5.1.0
-  - pip
+  - anaconda::pip==20.1.1
   - pip:
     - http://download.agisoft.com/Metashape-1.5.5-cp35.cp36.cp37-abi3-linux_x86_64.whl
