@@ -135,6 +135,7 @@ rule transform:
     wildcard_constraints:
         confidence="(high|low)"
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/transform/{confidence}-{image}.json"
     shell:
         "scripts/transform.py {input} {output}"
 
@@ -183,6 +184,7 @@ checkpoint rev_transform:
     output:
         directory(config['out']+"/{sample}/rev_transforms")
     conda: "envs/default.yml"
+    benchmark: config['out']+"/{sample}/benchmark/rev_transform.tsv"
     shell:
         "scripts/rev_transform.py {input} {output}"
 
