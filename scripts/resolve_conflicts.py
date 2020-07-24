@@ -52,9 +52,14 @@ def resolve(segments):
     else:
         return pd.Series([sum(segments['prob.1'])], index=['prob.1'])
 
-# first, load the image as an array, then get its shape
-print('loading orthomosaic')
-img_shape = np.asarray(Image.open(args.ortho)).shape[-2::-1]
+def img_size(ortho=args.ortho):
+    # first, load the image as an array, then get its shape
+    print('loading orthomosaic')
+    # note that this step is extremely memory inefficient!
+    # it loads the entire image into memory just so that we can get the image size
+    # TODO: improve memory usage here, perhaps by getting the image size from the segments.json file (in the imageData tag) or by using a different library that can determine image size without loading the image into memory
+    return np.asarray(Image.open(args.ortho)).shape[-2::-1]
+img_shape = img_size()
 
 # next, load the segments coords
 print('loading segments')
