@@ -37,9 +37,18 @@ def main(labels, labeled=False, dims=tuple()):
 def write(file, segments, image_path=None):
     """
         write the segments (belonging to image_path) to the file in JSON format
-        segments can be either a list of tuples (label, pts) or a simple list of pts
+        segments can be one of a number of things:
+            1) a simple list of pts
+            2) a list of 2-element tuples (label, pts)
+            3) a list of 3-element tuples (label, pts, class_label)
+                where class_label is one of two things:
+                1) a label
+                2) a 2-element tuple (label, probability)
         if image_path is provided, the file will be in valid labelme format
     """
+    if image_path:
+        import os.path
+        image_path = os.path.relpath(image_path, os.path.dirname(file))
     with open(file, 'w') as out:
         json.dump(
             {
@@ -51,7 +60,9 @@ def write(file, segments, image_path=None):
                         'fill_color': None,
                         'points': segment[1],
                         'shape_type': "polygon",
-                        'flags': {} if len(segment) == 2 else segment[2]
+                        'flags': dict([
+                            segment[2] if type(segment[2]) is tuple else (segment[2], True)
+                        ]) if len(segment) == 3 else {}
                     }
                     if type(segment) is tuple else
                     {

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import cv2
 import numpy as np
 from colorsys import *
 import matplotlib as mpl
@@ -184,6 +183,38 @@ def colorMoment(im, mask):
     return [Hstd, Sstd, Vstd, Hskew, Sskew, Vskew] #return all of the metrics.
 
 
-def sameness(im, segments, segment):
-    """ how many of the segments near segment are of the same species as it? """
-    pass
+def sameness(im, segments, center=None, radius=None):
+    """
+        how many of the segments near center are of the same species as it?
+        segments can be a mask where pixels are labeled by their class
+        or segments can be a list of 2-element tuples: (segments, class_label)
+        where "segments" is a list of types: imantics.Polygon.points
+    """
+    h, w = im.shape[:1]
+
+    # first, get a circular mask around the center
+    if center is None: # use the middle of the image
+        center = (int(w/2), int(h/2))
+    if radius is None: # use the smallest distance between the center and image walls
+        radius = min(center[0], center[1], w-center[0], h-center[1])
+    Y, X = np.ogrid[:h, :w]
+    dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
+    mask = dist_from_center <= radius
+
+    new_segments = {}
+    if type(segments) is list:
+        # now, figure out which segments are in the mask
+        for i in range(len(segments)):
+            # get the centroid of each segment
+            centroid = tuple(np.around(segments[i][0].mean(axis=0)).astype(np.uint))[::-1]
+            # use the segment only if its centroid is in the mask
+            if segments[i][1] not in new_segments:
+                new_segments[segments[i][1]] = 0
+            if mask[centroid]:
+                new_segments[segments[i][1]] += 1
+    else:
+        # add up all of the pixels in the mask
+        for i in np.unique(segments):
+            new_segments[i] = np.sum(segments[mask] == i)
+
+    return new_segments

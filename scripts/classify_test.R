@@ -32,7 +32,18 @@ if (names(test)[1] == "label") {
 	test<- read.table(test.data, header=TRUE, sep="\t", na.strings=c("NA",".","na","N/A"), skipNul=FALSE, row.names=NULL)
 }
 
-# making predictions
-print("making predictions and outputting results")
-pred= predict(fit, newdata= test, type="prob")
-write.table(pred$data, sep='\t', quote=FALSE, row.names=FALSE, na=".", output)
+# first, check: are there any plants in this image?
+if (!nrow(test)) {
+	# if not, handle it sepcifically
+	print(paste("warning:", test.data, "has no segments"))
+	if ('species_label' %in% colnames(test)){
+		write.table(data.frame('truth'=integer(), 'prob.0'=integer(), 'prob.1'=integer(), 'response'=integer()), sep="\t", quote=FALSE, na=".", output)
+	} else {
+		write.table(data.frame('prob.0'=integer(), 'prob.1'=integer(), 'response'=integer()), sep="\t", quote=FALSE, na=".", output)
+	}
+} else {
+	# making predictions
+	print("making predictions and outputting results")
+	pred= predict(fit, newdata= test, type="prob")
+	write.table(pred$data, sep='\t', quote=FALSE, na=".", output)
+}

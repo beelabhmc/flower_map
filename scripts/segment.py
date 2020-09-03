@@ -1,23 +1,50 @@
 #!/usr/bin/env python3
 import argparse
+from pathlib import Path
 
-parser = argparse.ArgumentParser(description='Segment the image into objects.')
-parser.add_argument(
-    "image",
-    help="a path to the image to segment"
+parser = argparse.ArgumentParser(
+    description=
+    """
+        Segment the image into objects and output both 1) contours which we are
+        highly confident have plants and 2) contours which we have less
+        confidence contain plants (where the contours from #1 are contained
+        within the regions outlined by #2). You can run watershed.py with #1 and
+        #2 to get the resulting contours.
+    """
 )
 parser.add_argument(
-    "out", type=argparse.FileType('w', encoding='UTF-8'),
-    help="the path to a file in which to store the coordinates of each extracted object"
+    "image", help="a path to the image to segment"
+)
+parser.add_argument(
+    "out_high", help="the path to a file in which to store the coordinates of each extracted high confidence object"
+)
+parser.add_argument(
+    "out_low", help="the path to a file in which to store the coordinates of each extracted low confidence object"
+)
+parser.add_argument(
+    "--texture-cache", type=Path, help=
+    """
+        The path to an npy file containing the texture of the image if already calculated.
+        (Providing this option can speed up repeated executions of this script on the same input.)
+        If this file does not exist, it will be created when the texture is calculated.
+    """
 )
 args = parser.parse_args()
+if not (
+    (args.out_high.endswith('.json') or args.out_high.endswith('.npy')) and
+    (args.out_low.endswith('.json') or args.out_low.endswith('.npy'))
+):
+    parser.error('Unsupported output file type. The files must have a .json or .npy ending.')
 
 import features
 import cv2 as cv
 import numpy as np
-#from test_util import * # uncomment for testing
-# import matplotlib.pyplot as plt # uncomment for testing
-# plt.ion() # uncomment for testing
+import scipy.ndimage
+
+# # uncomment this stuff for testing
+# from test_util import *
+# import matplotlib.pyplot as plt
+# plt.ion()
 
 
 # CONSTANTS
@@ -25,15 +52,37 @@ PARAMS = {
     'texture': {
         'window_radius': 2,
         'num_features': 6,
-        'inverse_resolution': 30,
-        'threshold': 1300,
-        'closing': {
-            'struct_element_size': 16,
-            'iterations': 4
+        'inverse_resolution': 30
+    },
+    'blur': {
+        'green_kernel_size': 5,
+        'green_strength': 60,
+        'contrast_kernel_size': 24
+    },
+    'combine': {
+        'green_weight': 0.75,
+        'contrast_weight': 0.25
+    },
+    'noise_removal': {
+        'strength': 17,
+        'templateWindowSize': 7,
+        'searchWindowSize': 21
+    },
+    'threshold': {
+        'high': 0.53,
+        'low': 0.53-0.07,
+    },
+    'morho': {
+        'big_kernel_size': 24,
+        'small_kernel_size': 5,
+        'high': {
+            'closing': 7,
+            'opening': 4+15
         },
-        'opening': {
-            'struct_element_size': 31,
-            'iterations': 2
+        'low': {
+            'closing': 7,
+            'opening': 4+7,
+            'closing2': 14
         }
     }
 }
@@ -60,87 +109,119 @@ def sliding_window(img, fnctn, size, num_features=1, skip=0):
             new[i:next_i,j:next_j,:] = fnctn(img[i1:i2,j1:j2])
     return new
 
+def green_contrast(
+    green, contrast, green_weight=PARAMS['combine']['green_weight'],
+    contrast_weight=PARAMS['combine']['contrast_weight']
+):
+    """ take a weighted average of the green and contrast values for each pixel """
+    # normalize the weights, just in case they don't already add to 1
+    total = green_weight + contrast_weight
+    green_weight /= total
+    contrast_weight /= total
+    # normalize the green and contrast values
+    green = green / np.max(green)
+    contrast = contrast / np.max(contrast)
+    return ((1-green)*green_weight) + (contrast*contrast_weight)
+
+def largest_polygon(polygons):
+    """ get the largest polygon among the polygons """
+    # we should probably use a complicated formula to do this
+    # but for now, it probably suffices to notice that the last one is usually
+    # the largest
+    return polygons.points[-1]
+
+def export_results(mask, out):
+    """ write the resulting mask to a file """
+    ret, markers = cv.connectedComponents(mask.astype(np.uint8))
+    # should we save the segments as a mask or as bounding boxes?
+    if out.endswith('.npy'):
+        np.save(out, markers)
+    elif out.endswith('.json'):
+        # import extra required modules
+        from imantics import Mask
+        import import_labelme
+        segments = [
+            (int(i), largest_polygon(Mask(markers == i).polygons()).tolist())
+            for i in range(1, ret)
+        ]
+        import_labelme.write(out, segments, args.image)
+    else:
+        raise Exception("Unsupported output file format.")
+
 print('loading image')
 img = cv.imread(args.image)
 
-print('calculating textures (this may take a while)')
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-if True:
-    texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
+if args.texture_cache is not None and args.texture_cache.exists():
+    print('loading texture from cached file')
+    texture = np.load(args.texture_cache)
 else:
-    texture = np.load("temp/texture.npy")
-thresh_contrast = cv.threshold(texture[:,:,0], PARAMS['texture']['threshold'], 255, cv.THRESH_BINARY)[1]
+    print('calculating texture (this may take a while)')
+    texture = sliding_window(gray, features.glcm, *tuple([PARAMS['texture'][i] for i in ['window_radius', 'num_features', 'inverse_resolution']]))
+    if args.texture_cache is not None:
+        args.texture_cache.parents[0].mkdir(parents=True, exist_ok=True)
+        np.save(args.texture_cache, texture)
 
-print('performing morphological operations to remove noise from texture')
-thresh_contrast_closing = cv.morphologyEx(thresh_contrast, cv.MORPH_CLOSE, np.ones((PARAMS['texture']['closing']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['closing']['iterations'])
-thresh_contrast_opening = cv.morphologyEx(thresh_contrast_closing, cv.MORPH_OPEN, np.ones((PARAMS['texture']['opening']['struct_element_size'],)*2, np.uint8), iterations = PARAMS['texture']['opening']['iterations'])
-# plot_img(create_arr([img, thresh_contrast, thresh_contrast_closing, thresh_contrast_opening], 2,2))
 
-# blur image to remove noise from flowers
-print('blurring image to remove noise')
-blur = cv.GaussianBlur(img,(5,5),60)
+# blur image to remove noise from grass
+print('blurring image to remove noise in the green and contrast values')
+blur_green = cv.GaussianBlur(img, (PARAMS['blur']['green_kernel_size'],)*2, PARAMS['blur']['green_strength'])
+blur_contrast = cv.blur(texture[:,:,0], (PARAMS['blur']['contrast_kernel_size'],)*2)
 
-print('creating thresholded matrix')
-# hsv = cv.cvtColor(img,cv.COLOR_BGR2HSV)
-# order of colors is blue, green, red
-thresh_green_orig = cv.bitwise_not(cv.inRange(blur, (0, 92, 0), (255, 255, 255)))
-thresh_green2_orig = cv.bitwise_not(cv.inRange(img, (0, 85, 0), (255, 255, 255)))
+print('combining green and contrast values and removing more noise')
+combined = np.uint8(green_contrast(blur_green[:,:,1], blur_contrast) * 255)
+combined = cv.fastNlMeansDenoising(
+    combined, None, PARAMS['noise_removal']['strength'],
+    PARAMS['noise_removal']['templateWindowSize'], PARAMS['noise_removal']['searchWindowSize']
+)
 
-thresh_green = np.logical_or(thresh_contrast_opening, thresh_green_orig).astype(np.float)*255
-thresh_green2 = np.logical_or(thresh_contrast_opening, thresh_green2_orig).astype(np.float)*255
+print('performing greyscale morphological closing')
+combined = scipy.ndimage.grey_closing(combined, size=(PARAMS['morho']['big_kernel_size'],)*2)
 
-# plot_img(create_arr([img, thresh_green2_orig, thresh_green2, blur, thresh_green_orig, thresh_green], 2, 3), create_arr(['original', 'green', 'green + contrast', 'blur', 'blurred green', 'blurred green + contrast'], 2, 3))
+print('thresholding')
+thresh_high = (combined > (PARAMS['threshold']['high'] * 255)) * np.uint8(255)
+# use a lower threshold to create the low confidence regions, so that they are larger
+thresh_low = (combined > (PARAMS['threshold']['low'] * 255)) * np.uint8(255)
 
 # noise removal
-print('performing morphological operations to remove noise from green')
-opening1 = cv.morphologyEx(thresh_green,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 1)
-closing1 = cv.morphologyEx(opening1, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 5)
-confident= cv.morphologyEx(closing1,cv.MORPH_OPEN, np.ones((6,6),np.uint8), iterations = 23)
-opening = cv.morphologyEx(closing1, cv.MORPH_OPEN, np.ones((3,3),np.uint8), iterations = 5)
-closing = cv.morphologyEx(opening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 15)
+print('performing morphological operations and hole filling')
+# first, create the kernels we use in the morpho operations
+small_kernel = np.ones((PARAMS['morho']['small_kernel_size'],)*2, np.uint8)
+big_kernel = np.ones((PARAMS['morho']['big_kernel_size'],)*2, np.uint8)
+# Now, we do morpho operations and hole filling to get the high confidence regions:
+# 1) use the fill_holes method to boost background pixels that are surrounded by foreground
+filled = scipy.ndimage.binary_fill_holes(thresh_high) * np.uint8(255)
+# 2) use closing to boost the size of the regions even more before step 4
+closing_high = cv.morphologyEx(
+    filled, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['high']['closing']
+)
+# 3) use fill_holes one more time, just in case there's anything else that needs filling
+filled1 = scipy.ndimage.binary_fill_holes(closing_high) * np.uint8(255)
+# 4) use a lot of morphological opening to keep only the regions that we are highly confident contain plants
+high = cv.morphologyEx(
+    filled1, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['high']['opening']
+)
+# Now, we do morpho operations to get the low confidence regions:
+# 1) use closing to boost the size of some of the plants that have a lot of foreground mixed in
+closing_low = cv.morphologyEx(
+    thresh_low, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['low']['closing']
+)
+# 2) use opening to get rid of the noise
+opening_low = cv.morphologyEx(
+    closing_low, cv.MORPH_OPEN, small_kernel, iterations = PARAMS['morho']['low']['opening']
+)
+# 3) use closing again to mostly undo the effects of the opening from before and create low-confidence regions
+low = cv.morphologyEx(
+    opening_low, cv.MORPH_CLOSE, small_kernel, iterations = PARAMS['morho']['low']['closing2']
+)
 
-topening1 = cv.morphologyEx(thresh_green2,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 1)
-tclosing1 = cv.morphologyEx(topening1, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 7)
-tconfident = cv.morphologyEx(tclosing1,cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 23)
-topening = cv.morphologyEx(tclosing1, cv.MORPH_OPEN, np.ones((5,5),np.uint8), iterations = 5)
-tclosing = cv.morphologyEx(topening, cv.MORPH_CLOSE, np.ones((5,5),np.uint8), iterations = 15)
+# # uncomment this stuff for testing
+# plot_img(([
+#     img, thresh_high, closing_high, high,
+#     low, thresh_low, closing_low, opening_low
+# ], 2, 4), close=True)
 
-# plot_img(create_arr([img, topening1, tclosing1, topening, tclosing, blur, opening1, closing1, opening, closing], 2, 5))
-# plot_img(create_arr([img, thresh_green2_orig, thresh_green2, tconfident, tclosing, blur, thresh_green_orig, thresh_green, confident, closing], 2, 5), create_arr(['original', 'green', 'green + contrast', 'confident', 'final', 'blur', 'blurred green', 'blurred green + contrast', 'confident', 'final'], 2, 5))
-
-# Finding unknown region
-print('identifying unknown regions (those not classified as either foreground or background)')
-unknown = cv.subtract(closing, confident)
-
-# Marker labelling
-print('marking connected components')
-# ret, markers = cv.connectedComponents(sure_fg)
-ret, markers = cv.connectedComponents(tconfident.astype(np.uint8))
-# Add one to all labels so that sure background is not 0, but 1
-markers = markers+1
-# Now, mark the region of unknown with zero
-markers[unknown==255] = 0
-
-print('running the watershed algorithm')
-markers = cv.watershed(img,markers)
-# img[markers == -1] = [255,0,0]
-
-# # finally, now that we have each pixel marked according to the region it belongs to
-# print('finding polygons')
-markers[markers == -1] = 1
-markers -= 1
-
-# should we save the segments as a mask or as bounding boxes?
-if args.out.name.endswith('.npy'):
-    np.save(args.out.name, markers)
-elif args.out.name.endswith('.json'):
-    # import extra required modules
-    from imantics import Mask
-    import import_labelme
-    segments = [
-        (int(i), Mask(markers == i).polygons().points[0].tolist())
-        for i in filter(lambda x: x, np.unique(markers))
-    ]
-    import_labelme.write(args.out.name, segments, args.image)
-else:
-    sys.exit("Unsupported output file format.")
+# save the resulting masks to files
+print('writing resulting masks to output files')
+export_results(high, args.out_high)
+export_results(low, args.out_low)

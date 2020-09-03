@@ -39,7 +39,8 @@ All chunks will be applied.
 The DEM will be generated in duplicated chunk: "chunk name"_DEM respectively
 Therefore, please avoid "_DEM" in your chunk name. Otherwise, it will not be processed.
 """
-from os import walk
+from pathlib import Path
+from collections import Counter
 try:
     import Metashape as PhotoScan
 except ImportError:
@@ -56,7 +57,7 @@ QualityCriteria = 0.5
 #
 # Variables for photo alignment
 # Accuracy: HighestAccuracy, HighAccuracy, MediumAccuracy, LowAccuracy, LowestAccuracy
-Accuracy = PhotoScan.Accuracy.HighAccuracy
+Accuracy = PhotoScan.Accuracy.HighestAccuracy
 Key_Limit = 60000
 Tie_Limit = 0
 #
@@ -295,12 +296,16 @@ def ReduceError_RE(chunk, init_threshold=0.3):
         fltr.init(chunk, PhotoScan.PointCloud.Filter.ReprojectionError)
         threshold = init_threshold
 
-def create_doc(image_path):
+def create_doc(images_path, ext=None):
     # intialize a doc containing the images in image_path
     doc = PhotoScan.Document()
     chunk = doc.addChunk()
-    image_path = image_path[:-1] if image_path.endswith('/') else image_path
-    images = [image_path+"/"+image for image in tuple(walk(image_path))[0][2] if image.endswith('.JPG')]
+    images = [image for image in images_path.iterdir() if image.is_file()]
+    if ext is None:
+        ext = Counter([image.suffix for image in images]).most_common(1)[0][0]
+    images = [
+        str(image) for image in images if image.suffix == ext
+    ]
     chunk.addPhotos(images)
     return doc
 
@@ -311,8 +316,16 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Stitch the drone imagery together.')
     parser.add_argument(
-        "images",
+        "images", type=Path,
         help="a path to a folder containing the drone imagery to stitch with"
+    )
+    parser.add_argument(
+        "--fast",  action='store_true',
+        help="whether to perform fast, low quality stitching instead of the regular high quality kind. use this flag if you care only about aligning images and not about the quality of the orthomosaic"
+    )
+    parser.add_argument(
+        "--ext",  default=None,
+        help="the extension of the images in the images directory (ex: .JPG); if not provided, we'll make an intelligent guess"
     )
     parser.add_argument(
         "out",
@@ -320,7 +333,11 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    doc = create_doc(args.images)
+    if args.fast:
+        Quality = PhotoScan.Quality.LowestQuality
+        BlendingMode = PhotoScan.BlendingMode.DisabledBlending
+
+    doc = create_doc(args.images, args.ext)
 
     # Initialising listing chunks
     chunk_list = doc.chunks

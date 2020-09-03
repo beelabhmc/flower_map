@@ -2,41 +2,70 @@
 # and options for the pipeline. Anybody wishing to use
 # the provided snakemake pipeline should first fill out this file with paths to
 # their own data, as the Snakefile requires it.
+# Every config option has reasonable defaults unless it is labeled as "required."
+# All paths are relative to the directory that Snakemake is executed in.
 # Note: this file is written in the YAML syntax (https://learnxinyminutes.com/docs/yaml/)
 
 
 # The path to a text file specifying where to find images (with a .JPG ending) for each sample
 # Each row in the sample file should represent a different sample.
-# The sample file should have 2 columns (each separated by a single tab):
-#       <unique_sample_name> <path_to_images>
+# The sample file should have 3 columns (each separated by a single tab):
+#       <unique_sample_name> <path_to_images> <image_ext>
+# Here's an example:
+#       test	data/test	.JPG
+# Note that <image_ext> is optional. If it isn't provided (ie there is no tab
+# after <path_to_images>, the ext will be inferred based on the most common
+# file extension among the files in the <path_to_images> dir. If <image_ext>
+# is blank (ie there is a trailing tab but no ext), all of the files in the
+# <path_to_images> directory will be assumed to be images.
+# required!
 sample_file: data/samples.tsv
 
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
-# SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
-SAMP_NAMES: [62217East1, 62217West2, 62317East2]
+SAMP_NAMES: [test, test2, 62217West1, 62217West2, 62317East2, 62617East3, 62217East1, 62217West2, 62317East2]
 
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
 # the experimental strategy parallelizes the segmentation step by running it on
-# each of the original images If this option is set to false or commented out,
+# each of the original images.
+# If this option is set to false or commented out,
 # the default strategy will be used
 parallel: true
 
-# Whether to tune the hyparameters of the classifier when traning it
-# Enabling this option will significantly increase the running time of the pipeline
-tune: false
+# Whether to perform the stitching step with low quality settings (true)
+# instead of high quality ones (false). The high quality settings are usually
+# only helpful if you plan to perform segmentation and classification on the
+# orthomosaic. Using low quality settings can significantly improve the running
+# time and memory usage of the stitching step.
+# If this line is commented out or the value is set to null, it will default to
+# the value of the 'parallel' config option (see above).
+low_qual_ortho: null
 
-# The beta value used for calculating the F-beta score
-# If you choose beta such that 0 < beta < 1, the classifier will have more
-# false negatives and if you choose beta such that beta > 1, the classifier
-# will have more false positives
-beta: 1
+# Truth data for training/testing.
+# This is a dictionary keyed by sample name.
+# Each value is itself a dictionary containing three key-value pairs:
+# path (required) - The path to a TSV file which should have two columns:
+#     1) the IDs of each segment containing plant
+#     2) the species labels (currently: 0 or 1 for whether the plant is buckwheat)
+#     The TSV file should not have a header line.
+# train_all (optional) - Whether to train on all of the data in the truth set or use half
+#     of the data for training and half for testing. If this line is commented out
+#     or set to a falsey value, the truth set will be split in half. Otherwise,
+#     the testing steps will be skipped.
+truth:
+    test:
+        path: out/test/truth.tsv
+        train_all: false
 
 # If you already have a trained model, provide it here. Otherwise, comment out
 # this line or set it to a falsey value.
-model: out/before-benchmark/test2o/classify/model.rda
+# If you already have a trained model, any truth sets you provide (see "truth"
+# above) will be used only for testing.
+# required! (unless truth sets are provided above)
+# model: data/models/test2.rda
 
 # The path to the directory in which to place all of the output files
 # defined relative to whatever directory you execute the snakemake command in
+# required!
 out: out

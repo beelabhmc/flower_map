@@ -34,7 +34,7 @@ print("creating training task and making RF learner")
 
 # optimize hyper parameters
 # make training task
-traintask <- makeClassifTask(data = training, target = colnames(training)[ncol(training)], positive = 1)
+traintask <- makeClassifTask(data = training, target = 'species_label', positive = 1)
 
 # create learner
 rf.lrn <- makeLearner("classif.ranger", predict.type = "prob")
