@@ -8,15 +8,16 @@
 #$ -e /dev/null
 
 
-# first, handle some weird behavior where sge passes the noclobber argument to the script
-# this only applies if the script is being executed from qsub on our cluster (like: qsub run.bash)
-test "$1" = "noclobber" && shift
-
 # An example bash script demonstrating how to run the entire snakemake pipeline
 # on an SGE cluster
-# This script creates two separate log files:
+# This script creates two separate log files in the output dir:
 # 	1) log - the basic snakemake log of completed rules
 # 	2) qlog - a more detailed log of the progress of each rule and any errors
+
+# Before running this snakemake pipeline, remember to complete the config file
+# with the required input info. In particular, make sure that you have created
+# a samples.tsv file specifying paths to your drone imagery.
+# Also, make sure that this script is executed from the directory that it lives in!
 
 # you can specify a directory for all output here:
 out_path="out"
@@ -30,20 +31,22 @@ if [ -f "${out_path}/qlog" ]; then
 	echo ""> "${out_path}/qlog";
 fi
 
-# make sure that this script is executed from the directory that it lives in!
+# handle some weird behavior where sge passes the noclobber argument to the script
+# this only applies if the script is being executed from qsub on our cluster (like: qsub run.bash)
+test "$1" = "noclobber" && shift
 
-# # also, make sure this script is being executed in the correct snakemake environment!
-# if [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
-# 	conda activate snakemake
-# 	echo "Switched to snakemake environment." > "${out_path}/log"
-# fi
+# try to find and activate the snakemake conda env if we need it
+if ! command -v 'snakemake' &>/dev/null && \
+   command -v 'conda' &>/dev/null && \
+   [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && \
+   conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
+        echo "Snakemake not detected. Attempting to switch to snakemake environment." >> "$out_path/log"
+        eval "$(conda shell.bash hook)"
+        conda activate snakemake
+fi
 
-# Before running this snakemake pipeline, remember to complete the config file
-# with the required input info. In particular, make sure that you have created
-# a samples.tsv file specifying paths to your drone imagery.
-
-# check: should we execute via qsub?
-if [[ $* == *--sge-cluster* ]]; then
+# check: are we being executed from within qsub?
+if [ "$ENVIRONMENT" = "BATCH" ]; then
 	snakemake \
 	--cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
 	--config out="$out_path" \
@@ -51,13 +54,24 @@ if [[ $* == *--sge-cluster* ]]; then
 	--use-conda \
 	-k \
 	-j 12 \
-	${@//--sge-cluster/} &>"$out_path/log"
+	"$@" &>"$out_path/log"
 else
 	snakemake \
 	--config out="$out_path" \
 	--latency-wait 60 \
 	--use-conda \
 	-k \
-	-j \
-	"$@" 2>"$out_path/log" >"$out_path/qlog"
+	-j 12 \
+	"$@" 2>>"$out_path/log" >>"$out_path/qlog"
 fi
+
+# message the user on slack if possible
+exit_code="$?"
+if command -v 'slack' &>/dev/null; then
+    if [ "$exit_code" -eq 0 ]; then
+        slack "flower-mapping pipeline finished successfully" &>/dev/null
+    else
+        slack "flower-mapping pipeline exited with error code $exit_code"
+    fi
+fi
+exit "$exit_code"
