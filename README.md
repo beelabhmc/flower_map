@@ -38,7 +38,7 @@ Create an Agisoft Metashape license file named `metashape.lic` in the same direc
     ```
 
 #### Executing the pipeline on your own data
-You must modify [the config.yaml file](config.yml) to specify paths to your data. See [our wiki](wiki) for more information.
+You must modify [the config.yaml file](config.yml) to specify paths to your data. See [our wiki](/wiki) for more information.
 
 ### If this is your first time using Snakemake
 We recommend that you run `snakemake --help` to read about Snakemake's options. For example, to check that the pipeline will be executed correctly before you run it, you can call Snakemake with the `-n -p -r` flags. This is also a good way to familiarize yourself with the steps of the pipeline and their inputs and outputs (the latter of which are inputs to the first rule in the pipeline -- ie the `all` rule).
