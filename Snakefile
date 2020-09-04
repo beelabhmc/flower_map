@@ -14,6 +14,9 @@ def check_config(value, default=False, place=config):
     """ return true if config value exists and is true """
     return place[value] if (value in place and place[value] is not None) else default
 
+# set the output directory if it isn't set already
+config['out'] = check_config('out', default='out')
+
 def exp_str():
     """ return the prefix str for the experimental strategy """
     return "-exp" if check_config('parallel') else ""
@@ -112,7 +115,7 @@ rule export_ortho:
         "scripts/export_ortho.py {input} {output}"
 
 rule segment:
-    """ segment plants from an image into high and low confidence regions"""
+    """ segment plants from an image into high and low confidence regions """
     input:
         lambda wildcards: SAMP[wildcards.sample]+"/"+wildcards.image+SAMP_EXT[wildcards.sample][0] if check_config('parallel') else rules.export_ortho.output
     params:
@@ -248,6 +251,7 @@ checkpoint create_split_truth_data:
         "scripts/create_truth_data.py {params.features} {input.truth} {output}"
 
 def train_input(wildcards):
+    """ return the input to the training step """
     if check_config('truth') and check_config(wildcards.sample, place=config['truth']):
         if check_config('train_all', place=config['truth'][wildcards.sample]):
             return rules.create_truth_data.output
@@ -266,6 +270,7 @@ rule train:
         "Rscript scripts/classify_train.R {input} {output}"
 
 def classify_input(wildcards, return_int=False):
+    """ return the input to the classify step """
     if check_config('truth') and check_config(wildcards.sample, place=config['truth']):
         image_ending = "/{image}.tsv" if check_config('parallel') else ''
         if check_config('train_all', place=config['truth'][wildcards.sample]):
@@ -363,6 +368,7 @@ rule resolve_conflicts:
         "scripts/resolve_conflicts.py {input.img} {input.labels} {params.predicts} {output}"
 
 def predictions(wildcards):
+    """ return the current predictions """
     if check_config('parallel'):
         return expand(rules.resolve_conflicts.output[0], sample=wildcards.sample)
     else:

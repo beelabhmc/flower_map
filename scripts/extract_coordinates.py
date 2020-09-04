@@ -5,7 +5,7 @@ import argparse
 parser = argparse.ArgumentParser(description='Extract the coordinates of points in the orthomosaic.')
 parser.add_argument(
     "orthomosaic",
-    help="a path to the orthomosaic"
+    help="a path to the orthomosaic, as a Metashape project file"
 )
 parser.add_argument(
     "--points", default=None, help=
