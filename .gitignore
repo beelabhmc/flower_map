@@ -1,6 +1,6 @@
 out/
 data/
-metashape.lic
+metashape*.lic
 .snakemake/
 __pycache__/
 *.pyc
