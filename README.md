@@ -39,6 +39,7 @@ metashape_LICENSE="your-25-digit-license-key-goes-here" ./run.bash -U create_lic
     ```
     qsub run.bash
     ```
+Log files describing the output of the pipeline will be created within the output directory. The `log` file contains a basic description of the progress of each rule, while the `qlog` file is more detailed.
 
 #### Executing the pipeline on your own data
 You must modify [the config.yaml file](config.yml) to specify paths to your data. See [our wiki](https://github.com/beelabhmc/flower_map/wiki) for more information.
