@@ -19,7 +19,10 @@ conda create -n snakemake -c bioconda -c conda-forge --no-channel-priority 'snak
 We highly recommend you install [Snakemake via conda](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda) like this so that you can use the `--use-conda` flag when calling `snakemake` to let it [automatically handle all dependencies](https://snakemake.readthedocs.io/en/stable/snakefiles/deployment.html#integrated-package-management) of the pipeline. Otherwise, you must manually install the dependencies listed in the [env files](envs).
 
 ## Agisoft Metashape
-Create an Agisoft Metashape license file named `metashape.lic` in the same directory as the `run.bash` script. Without this file, the pipeline will attempt to run Metashape unlicensed, which usually fails on import.
+Our Snakefile assumes that there is a `metashape.lic` file containing the Metashape License in the same directory as the `run.bash` script. Without this file, the pipeline will attempt to run Metashape unlicensed, which usually fails on import. To create the file, run the following command after activating your `snakemake` conda environment:
+```
+metashape_LICENSE="your-25-digit-license-key-goes-here" ./run.bash -U create_license
+```
 
 # execution
 1. Activate snakemake via `conda`:

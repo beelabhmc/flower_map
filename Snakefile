@@ -89,6 +89,17 @@ def all_input():
 rule all:
     input: all_input()
 
+rule create_license:
+    """ create the agisoft metashape.lic file """
+    output:
+        "metashape.lic"
+    params:
+        license = os.environ["agisoft_LICENSE"],
+        key = os.environ["metashape_LICENSE"]
+    conda: "envs/default.yml"
+    shell:
+        "agisoft_LICENSE=\"{params.license}\" python -c 'import Metashape; Metashape.License().activate(\"{params.key}\"); exit(not Metashape.app.activated)'"
+
 rule stitch:
     """ create an orthomosaic from the individual images """
     input:
