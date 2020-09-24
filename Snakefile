@@ -94,8 +94,8 @@ rule create_license:
     output:
         "metashape.lic"
     params:
-        license = os.environ["agisoft_LICENSE"],
-        key = os.environ["metashape_LICENSE"]
+        license = lambda wildcards: os.environ["agisoft_LICENSE"],
+        key = lambda wildcards: os.environ["metashape_LICENSE"]
     conda: "envs/default.yml"
     shell:
         "agisoft_LICENSE=\"{params.license}\" python -c 'import Metashape; Metashape.License().activate(\"{params.key}\"); exit(not Metashape.app.activated)'"
