@@ -108,18 +108,19 @@ rule stitch:
         low_qual = "--fast" if check_config('low_qual_ortho', check_config('parallel')) else "",
         ext = lambda wildcards: "--ext '"+SAMP_EXT[wildcards.sample][0]+"'"
     output:
-        config['out']+"/{sample}/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+"/stitched.psx"
+        project = config['out']+"/{sample}/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+"/stitched.psx",
+        files = directory(config['out']+"/{sample}/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+"/stitched.files")
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+".tsv"
     shell:
-        "scripts/stitch.py {params} {input} {output}"
+        "scripts/stitch.py {params} {input} {output.project}"
 
 rule export_ortho:
     """ extract an orthomosaic image from the project file """
     input:
-        rules.stitch.output
+        rules.stitch.output.project
     output:
-        str(Path(rules.stitch.output[0]).parents[0])+"/ortho.tiff"
+        str(Path(rules.stitch.output.project).parents[0])+"/ortho.tiff"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/export_ortho.tsv"
     shell:
@@ -142,7 +143,7 @@ rule segment:
 rule transform:
     """ transform the segments from the ortho to each image """
     input:
-        rules.stitch.output,
+        rules.stitch.output.project,
         lambda wildcards: rules.segment.output.high if wildcards.confidence == 'high' else rules.segment.output.low
     output:
         config['out']+"/{sample}/transforms/{confidence}/{image}.json"
@@ -193,7 +194,7 @@ rule watershed:
 checkpoint rev_transform:
     """ transform the segments from ortho coords to the original image coords """
     input:
-        rules.stitch.output,
+        rules.stitch.output.project,
         rules.watershed.output.segments
     output:
         directory(config['out']+"/{sample}/rev_transforms")
