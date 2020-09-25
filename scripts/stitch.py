@@ -178,7 +178,7 @@ def BuildMosaic(chunk, BlendingMode):
                                fill_holes=True)
     
 def StandardWorkflow(doc, chunk, out, **kwargs):
-    doc.save(args.out)
+    doc.save(out)
     chunk = doc.chunk
     
     # Skip the chunk if it is the DEM chunk we created
@@ -188,14 +188,14 @@ def StandardWorkflow(doc, chunk, out, **kwargs):
         if chunk.dense_cloud is None:
             BuildDenseCloud(chunk, kwargs['Quality'], kwargs['FilterMode'])
     # Must save before classification. Otherwise it fails.
-            doc.save(args.out)
+            doc.save(out)
             chunk = doc.chunk
             ClassifyGround(chunk, kwargs['Max_Angle'], kwargs['Cell_Size'])
-            doc.save(args.out)
+            doc.save(out)
             chunk = doc.chunk
         if chunk.model is None:
             BuildModel(chunk)
-            doc.save(args.out)
+            doc.save(out)
             chunk = doc.chunk
         
         if chunk.elevation is None:
@@ -205,16 +205,16 @@ def StandardWorkflow(doc, chunk, out, **kwargs):
     # Therefore, we need to duplicate the chunk to create DEM
             new_chunk = chunk.copy(items=[PhotoScan.DataSource.DenseCloudData])
             new_chunk.label = chunk.label + '_DEM'
-            doc.save(args.out)
+            doc.save(out)
             BuildDEM(new_chunk)
-            doc.save(args.out)
+            doc.save(out)
         
             # Change the active chunk back
             doc.chunk = chunk
         
         if chunk.orthomosaic is None:
             BuildMosaic(chunk, kwargs['BlendingMode'])
-        doc.save(args.out)
+        doc.save(out)
 
 def GetResolution(chunk):
     if 'dense_cloud/resolution' in chunk.dense_cloud.meta:
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     # Loop for all initial chunks
     for chunk in chunk_list:
         doc.chunk = chunk
-        
+
     # Align Photo only if it is not done yet
     if chunk.point_cloud is None:
         AlignPhoto(chunk, Accuracy, Key_Limit, Tie_Limit)
@@ -353,7 +353,7 @@ if __name__ == '__main__':
         ReduceError_PA(chunk)        
     # Do the rest when there's tie point
         ReduceError_RE(chunk)
-        StandardWorkflow(doc, chunk, args.out,
+        StandardWorkflow(doc, chunk, str(Path(args.out).resolve()),
                          Quality=Quality, FilterMode=FilterMode, 
                          Max_Angle=Max_Angle, Cell_Size=Cell_Size, 
                          BlendingMode=BlendingMode)
