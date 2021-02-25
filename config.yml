@@ -24,6 +24,7 @@ sample_file: data/samples.tsv
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
 #SAMP_NAMES: [region1, region2]
+SAMP_NAMES: [test2, 52217East]
 
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
@@ -53,9 +54,9 @@ low_qual_ortho: null
 #     of the data for training and half for testing. If this line is commented out
 #     or set to a falsey value, the truth set will be split in half. Otherwise,
 #     the testing steps will be skipped.
-#truth:
-#    region1:
-#        path: data/region1/truth.tsv
+# truth:
+#    test2:
+#        path: data/test2/truth.tsv
 #        train_all: false
 
 # If you already have a trained model, provide it here. Otherwise, comment out
@@ -69,3 +70,6 @@ model: data/models/test-all-exp.rda
 # defined relative to whatever directory you execute the snakemake command in
 # Defaults to 'out' if not provided
 out: out
+
+# specifying the number of cores used to process each dataset
+cores: 5        # The number of cores to use for this step

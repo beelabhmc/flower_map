@@ -112,6 +112,7 @@ rule stitch:
         files = directory(config['out']+"/{sample}/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+"/stitched.files")
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/stitch"+("-lowQual" if check_config('low_qual_ortho', check_config('parallel')) else "")+".tsv"
+    threads: config['cores']
     shell:
         "scripts/stitch.py {params} {input} {output.project}"
 
@@ -123,6 +124,7 @@ rule export_ortho:
         str(Path(rules.stitch.output.project).parents[0])+"/ortho.tiff"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/export_ortho.tsv"
+    threads: config['cores']
     shell:
         "scripts/export_ortho.py {input} {output}"
 
@@ -137,6 +139,7 @@ rule segment:
         low = config['out']+"/{sample}/segments/low/{image}.json" if check_config('parallel') else config['out']+"/{sample}/segments/low.json"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/segments/"+("{image}" if check_config('parallel') else "ortho")+".tsv"
+    threads: config['cores']
     shell:
         "scripts/segment.py {params} {input} {output}"
 
@@ -151,6 +154,7 @@ rule transform:
         confidence="(high|low)"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/transform/{confidence}-{image}.json"
+    threads: config['cores']
     shell:
         "scripts/transform.py {input} {output}"
 
@@ -188,6 +192,7 @@ rule watershed:
         segments = config['out']+"/{sample}/segments"+exp_str()+".json"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/watershed"+exp_str()+".tsv"
+    threads: config['cores']
     shell:
         "scripts/watershed.py {input.ortho} {params.high_dir} {params.low_dir} {output.segments}"
 
@@ -278,6 +283,7 @@ rule train:
         config['out']+"/{sample}/train"+exp_str()+"/model.rda",
         config['out']+"/{sample}/train"+exp_str()+"/variable_importance.tsv"
     conda: "envs/classify.yml"
+    threads: config['cores']
     shell:
         "Rscript scripts/classify_train.R {input} {output}"
 
@@ -321,6 +327,7 @@ rule classify:
         config['out']+"/{sample}/classify"+exp_str()+"/{image}.tsv"
     conda: "envs/classify.yml"
     benchmark: config['out']+"/{sample}/benchmark/classify"+exp_str()+"/{image}.tsv"
+    threads: config['cores']
     shell:
         "Rscript scripts/classify_test.R {input} {output}"
 
@@ -331,6 +338,7 @@ rule test:
         config['out']+"/{sample}/test"+exp_str()+"/classify/{image}.tsv"
     conda: "envs/classify.yml"
     benchmark: config['out']+"/{sample}/benchmark/test"+exp_str()+"/classify/{image}.tsv"
+    threads: config['cores']
     shell:
         "Rscript scripts/classify_test.R {input} {output}"
 
@@ -426,6 +434,7 @@ rule segments_map:
         config['out']+"/{sample}/segments-map"+exp_str()+".tiff"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/segments-map"+exp_str()+".tsv"
+    threads: config['cores']
     shell:
         "scripts/map.py -l {input.img} {input.labels} {output}"
 
@@ -439,6 +448,7 @@ rule map:
         config['out']+"/{sample}/map"+exp_str()+".tiff"
     conda: "envs/default.yml"
     benchmark: config['out']+"/{sample}/benchmark/map"+exp_str()+".tsv"
+    threads: config['cores']
     shell:
         "scripts/map.py {input.img} {input.labels} {output} {input.predicts}"
 

@@ -31,7 +31,9 @@ def metrics(img, mask):
                mask - a boolean mask with true values at pixel values contained within the segmented region
         output: metrics - all of the features we can calculate for that segmented region
     """
+    print(args.img)
     avg = features.colorAvg(img, mask)
+    print(avg)
     yellow = features.yellowFast(img, mask)
     edges = features.countEdgePixels(img, mask)
     var = features.colorVariance(img, mask)
@@ -77,6 +79,7 @@ def processMarkers(markers):
     # create a np array to store the results of the feature calculation step
     out = np.empty((len(marker_ids), NUM_FEATURES))
     # extract boolean masks of the regions corresponding with each marker
+    inFileCorrectIndex = 0
     for i in range(len(marker_ids)):
         marker = marker_ids[i]
         mask = Image.fromarray(markers == marker)
@@ -84,7 +87,11 @@ def processMarkers(markers):
         # crop out only the bounding rectangle surrounding the polygon
         new_img = img.crop(mask_box)
         new_mask = mask.crop(mask_box)
-        out[i,:] = metrics(new_img, new_mask)
+        try:
+            out[inFileCorrectIndex,:] = metrics(new_img, new_mask)
+            inFileCorrectIndex += 1
+        except:
+            print("Current marker invalid, discarded.")
     return np.hstack((marker_ids[:, np.newaxis], out))
 
 # if the data is from labelme, import it using the labelme importer
@@ -98,8 +105,13 @@ if args.labels.endswith('.json'):
     out = np.empty((len(labels), NUM_FEATURES))
     # for each segmented region:
     # TODO: parallelize these steps somehow? one potential complication: the output needs to remain in the same order as the labels
+    inFileCorrectIndex = 0
     for i in range(len(labels)):
-        processLabel(labels[i])
+        try:
+            processLabel(labels[inFileCorrectIndex])
+            inFileCorrectIndex += 1
+        except:
+            print("Current marker invalid, discarded.")
     # add the keys
     out = np.hstack((np.array(label_keys)[:, np.newaxis], out))
 elif args.labels.endswith('.npy'):
