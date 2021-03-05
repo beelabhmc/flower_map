@@ -35,8 +35,8 @@ fi
 test "$1" = "noclobber" && shift
 
 # try to find and activate the snakemake conda env if we need it
-# changed 2/13/2021 deleted snakemake detection conditional because snakmake 5.5.3 is installed on purves globally
-if command -v 'conda' &>/dev/null && \
+if ! command -v 'snakemake' &>/dev/null && \
+	command -v 'conda' &>/dev/null && \
    [ "$CONDA_DEFAULT_ENV" != "snakemake" ] && \
    conda info --envs | grep "$CONDA_ROOT/snakemake" &>/dev/null; then
         echo "Snakemake not detected. Attempting to switch to snakemake environment." >> "$out_path/log"
@@ -48,6 +48,8 @@ fi
 if [ "$ENVIRONMENT" = "BATCH" ]; then
 	snakemake \
 	--cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
+	# if we have parallel environment in the future, we could do the following instead: 
+	# --cluster "qsub -pe [NAME OF THE PARALLEL ENV] {threads} -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
 	--config out="$out_path" \
 	--latency-wait 60 \
 	--use-conda \

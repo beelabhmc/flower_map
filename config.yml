@@ -23,8 +23,7 @@ sample_file: data/samples.tsv
 
 # which samples should we execute the pipeline on?
 # Comment out this line if you want to run all samples in the sample file
-#SAMP_NAMES: [region1, region2]
-SAMP_NAMES: [test2, 52217East]
+# SAMP_NAMES: [region1, region2]
 
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
@@ -72,4 +71,8 @@ model: data/models/test-all-exp.rda
 out: out
 
 # specifying the number of cores used to process each dataset
+# TODO: note that this wouldn't work yet - we need to have parallel environments defined
+# in purves first before we can use snakemake's multithread feature
+# I just have it defined here so in the future if we have parallel environment
+# we could use it
 cores: 5        # The number of cores to use for this step

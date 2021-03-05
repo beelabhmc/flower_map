@@ -49,7 +49,6 @@ def transform(chunk, camera, points):
                 # 3) if the new point exists, it is transformed via matrix multiplcation to geocentric coords
                 # 4) the geocentric coords are projected to geographic coords (ie latitude and longitude)
                 pt = chunk.model.pickPoint(camera.center, camera.unproject(Metashape.Vector(point)))
-                # print(pt)
                 if pt is None:
                     # agh I don't know why this happens but we'll just skip it!
                     skipped += 1
@@ -57,7 +56,7 @@ def transform(chunk, camera, points):
                 pt = chunk.crs.project(chunk.transform.matrix.mulp(pt))
                 # finally, we convert the pt to pixel coords in the orthomosaic by looking at how far it is from the orthomosaic's top, left corner
                 yield [(pt[0]-chunk.orthomosaic.left)/x, (chunk.orthomosaic.top-pt[1])/y]
-    except(TypeError):
+    except TypeError:
         print("camera.center = ", str(camera.center), ", Meaning that too few images are on the orthomosaic. Maybe change a dataset.")
 # open the metashape document
 doc = Metashape.Document()
