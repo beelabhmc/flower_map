@@ -33,7 +33,6 @@ def metrics(img, mask):
     """
     print(args.img)
     avg = features.colorAvg(img, mask)
-    print(avg)
     yellow = features.yellowFast(img, mask)
     edges = features.countEdgePixels(img, mask)
     var = features.colorVariance(img, mask)
