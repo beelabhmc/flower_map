@@ -14,7 +14,6 @@ def colorAvg(im, mask):
     """Takes in a string containing an image file name, returns the average red, blue, and green
         values for all the pixels in that image."""
     imStats = ImageStat.Stat(im, mask)
-    print(imStats)
     (redAv, greenAv, blueAv) = imStats.mean
     return redAv, greenAv, blueAv
 
