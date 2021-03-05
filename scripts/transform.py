@@ -26,6 +26,7 @@ import logging
 import Metashape
 import numpy as np
 import import_labelme
+import time
 
 
 # count skipped points to see how much of a problem it is
@@ -36,23 +37,27 @@ def transform(chunk, camera, points):
     # get the width and height of every pixel in latitude and longitude units
     x = (chunk.orthomosaic.right-chunk.orthomosaic.left)/chunk.orthomosaic.width
     y = (chunk.orthomosaic.top-chunk.orthomosaic.bottom)/chunk.orthomosaic.height
-    for point in points:
-        # several steps are being taken here:
-        # 1) the point is projected from pixel coords to the camera's coordinate system
-        # 2) the pickPoint() method is used to transform the point to the chunk coord system using the camera's "vector intersection with the (orthomosaic) surface"
-        #    (see https://www.agisoft.com/forum/index.php?topic=10513.msg47741#msg47741)
-        # 3) if the new point exists, it is transformed via matrix multiplcation to geocentric coords
-        # 4) the geocentric coords are projected to geographic coords (ie latitude and longitude)
-        pt = chunk.model.pickPoint(camera.center, camera.unproject(Metashape.Vector(point)))
-        if pt is None:
-            # agh I don't know why this happens but we'll just skip it!
-            skipped += 1
-            continue
-        pt = chunk.crs.project(chunk.transform.matrix.mulp(pt))
-        # finally, we convert the pt to pixel coords in the orthomosaic by looking at how far it is from the orthomosaic's top, left corner
-        yield [(pt[0]-chunk.orthomosaic.left)/x, (chunk.orthomosaic.top-pt[1])/y]
-
-
+    # excute try/except block tomake sure camera.center is not null (too few pictures in the orthomosaic)
+    try:
+        pt = chunk.model.pickPoint(camera.center, camera.unproject(Metashape.Vector(points[0])))
+        if camera.center != None:
+            for point in points:
+                # several steps are being taken here:
+                # 1) the point is projected from pixel coords to the camera's coordinate system
+                # 2) the pickPoint() method is used to transform the point to the chunk coord system using the camera's "vector intersection with the (orthomosaic) surface"
+                #    (see https://www.agisoft.com/forum/index.php?topic=10513.msg47741#msg47741)
+                # 3) if the new point exists, it is transformed via matrix multiplcation to geocentric coords
+                # 4) the geocentric coords are projected to geographic coords (ie latitude and longitude)
+                pt = chunk.model.pickPoint(camera.center, camera.unproject(Metashape.Vector(point)))
+                if pt is None:
+                    # agh I don't know why this happens but we'll just skip it!
+                    skipped += 1
+                    continue
+                pt = chunk.crs.project(chunk.transform.matrix.mulp(pt))
+                # finally, we convert the pt to pixel coords in the orthomosaic by looking at how far it is from the orthomosaic's top, left corner
+                yield [(pt[0]-chunk.orthomosaic.left)/x, (chunk.orthomosaic.top-pt[1])/y]
+    except TypeError:
+        print("camera.center = ", str(camera.center), ", Meaning that too few images are on the orthomosaic. Maybe change a dataset.")
 # open the metashape document
 doc = Metashape.Document()
 doc.open(args.project_file, read_only=True)
