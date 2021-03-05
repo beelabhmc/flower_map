@@ -26,6 +26,7 @@ import logging
 import Metashape
 import numpy as np
 import import_labelme
+import time
 
 
 # count skipped points to see how much of a problem it is
@@ -44,6 +45,7 @@ def transform(chunk, camera, points):
         # 3) if the new point exists, it is transformed via matrix multiplcation to geocentric coords
         # 4) the geocentric coords are projected to geographic coords (ie latitude and longitude)
         pt = chunk.model.pickPoint(camera.center, camera.unproject(Metashape.Vector(point)))
+        # print(pt)
         if pt is None:
             # agh I don't know why this happens but we'll just skip it!
             skipped += 1
