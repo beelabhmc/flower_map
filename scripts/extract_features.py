@@ -31,7 +31,6 @@ def metrics(img, mask):
                mask - a boolean mask with true values at pixel values contained within the segmented region
         output: metrics - all of the features we can calculate for that segmented region
     """
-    print(args.img)
     avg = features.colorAvg(img, mask)
     yellow = features.yellowFast(img, mask)
     edges = features.countEdgePixels(img, mask)
