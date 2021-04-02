@@ -34,6 +34,9 @@ A python script for extracting machine learning features for each segmented regi
 ### [features.py](features.py)
 A suite of python functions for calculating features. These functions are used primarily by `extract_features.py`.
 
+### [images_with_segment.bash](images_with_segment.bash)
+A bash script that finds all of the original drone images that have a plant, provided the plant's segment ID. This script uses the output of a step in the experimental strategy. This script is __not__, in fact, part of the pipeline.
+
 ### [import_labelme.py](import_labelme.py)
 A python module for importing segments from a json labelme file. The functions in this module are used by many other scripts.
 
