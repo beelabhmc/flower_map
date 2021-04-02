@@ -10,7 +10,7 @@
 # DJI_0284
 
 if [ ! -d "${1%/}"/rev_transforms ]; then
-  echo "The directory ${1%/}/rev_transforms/ must exist in order to run this script. Check that you are using the experimental strategy of the pipeline and that the 'parallel' config option is set to true."
+  echo "The directory '${1%/}/rev_transforms/' must exist in order to run this script. Check that you are using the experimental strategy of the pipeline and that the 'parallel' config option is set to true."
   exit 1
 fi
 cd "${1%/}"/rev_transforms
