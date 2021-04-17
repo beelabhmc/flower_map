@@ -12,7 +12,7 @@
 # The sample file should have 3 columns (each separated by a single tab):
 #       <unique_sample_name> <path_to_images> <image_ext>
 # Here's an example:
-#       test	data/test	.JPG
+#       test  data/test .JPG
 # Note that <image_ext> is optional. If it isn't provided (ie there is no tab
 # after <path_to_images>, the ext will be inferred based on the most common
 # file extension among the files in the <path_to_images> dir. If <image_ext>
@@ -21,10 +21,13 @@
 # required!
 sample_file: data/samples.tsv
 
-# which samples should we execute the pipeline on?
+# which samples should we execute the pzipeline on?
 # Comment out this line if you want to run all samples in the sample file
 # SAMP_NAMES: [region1, region2]
-
+# SAMP_NAMES: [6217East, 6217West]
+# SAMP_NAMES: [6617East1, 6617East2,6617West]
+# testing how the model performs on the other dataset
+SAMP_NAMES: [6217East]
 # Whether to perform the default strategy or the experimental one
 # The default strategy performs segmentation on the stitched orthomosaic, while
 # the experimental strategy parallelizes the segmentation step by running it on
@@ -57,14 +60,19 @@ low_qual_ortho: null
 #    test2:
 #        path: data/test2/truth.tsv
 #        train_all: false
+# truth:
+#    6617East1:
+#        path: out/6617East1/truth.tsv 
+#        train_all: false
 
 # If you already have a trained model, provide it here. Otherwise, comment out
 # this line or set it to a falsey value.
 # If you already have a trained model, any truth sets you provide (see "truth"
 # above) will be used only for testing.
 # required! (unless truth sets are provided above)
-model: data/models/test-all-exp.rda
-
+# TODO: starting to train for 6617E
+# model: data/models/test-all-exp.rda
+model: newModels/model6617E1.rda
 # The path to the directory in which to place all of the output files
 # defined relative to whatever directory you execute the snakemake command in
 # Defaults to 'out' if not provided
@@ -76,3 +84,10 @@ out: out
 # I just have it defined here so in the future if we have parallel environment
 # we could use it
 cores: 5        # The number of cores to use for this step
+
+
+# FOR THE RULE extract_images (only comment if using that rule)
+# specifying the list of segment labels that you want to extract the
+# source images for
+extracted_labels: "515, 520"
+config_address: "/mnt/biology/donaldson/tom/flower_map/config.yml"
