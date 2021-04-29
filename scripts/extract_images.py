@@ -22,21 +22,20 @@ import os
 import re
 import json
 import yaml
+import import_labelme
+
 
 def extractAllImages(sourceDir, targetLabels, out):
     """extract images used to form certain labels in the segment map stitch"""
     outputImages = []
     outputImageDict = {}
-    print(targetLabels)
-    print("WHATS GOING ON??")
     for filename in os.listdir(sourceDir):
         if filename.endswith(".json"):
-            # json_reader = open(filename, "rt")
-            print(filename)
-            json_reader = open(sourceDir+"/"+filename,)
-            json_data = json.load(json_reader)
-            for line in json_data["shapes"]:
-                currentLabel = str(line["label"])
+            segments = import_labelme.main(sourceDir+"/"+filename, labeled=True)
+            if segments != {}:
+                currentLabels = segments.keys()
+
+            for currentLabel in currentLabels:
                 if currentLabel in targetLabels:
                     imageFilename = filename[:-5]+'.JPG'
                     outputImages.append(imageFilename)
