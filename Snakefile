@@ -457,12 +457,13 @@ rule extract_images:
     """for recovering the source images given a set of labels from segment_map(_exp).tiff"""
     input:
         sourceDir =  config['out']+"/{sample}/rev_transforms/",
-        configFile =  config['config_address']
+    params:
+        labels =  config['extracted_labels'],
     output:
         config['out']+"/{sample}/label_Images.txt"
     conda: "envs/default.yml"
     shell:
-        "scripts/extract_images.py {input.sourceDir} {input.configFile} {output}"
+        "scripts/extract_images.py {input.sourceDir} {params.labels} {output}"
         
 print(lambda wildcards: SAMP[wildcards.sample])
 rule subset_images:

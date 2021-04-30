@@ -81,5 +81,4 @@ cores: 5        # The number of cores to use for this step
 # FOR THE RULE extract_images (only uncomment if using that rule)
 # specifying the list of segment labels that you want to extract the
 # source images for
-# extracted_labels: "515, 520, 571, 560"
-# config_address: "/mnt/biology/donaldson/tom/flower_map/config.yml"
+extracted_labels: [515, 520, 571, 560]

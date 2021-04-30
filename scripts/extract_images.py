@@ -10,7 +10,7 @@ parser.add_argument(
     "sourceDir", help="the path to the directory containing the current sample's rev_transform jsons", type=str
 )
 parser.add_argument(
-    "configFile", help="the path to a directory containing (for each image in the orthomosaic) the coordinates of each segmented region"
+    "labels", nargs='+', help='either the path to a yaml file containing a list of segment IDs keyed by the entry "extracted_labels" OR each segment ID as a list of arguments'
 )
 parser.add_argument(
     "out", help="the text file containing all the image file names associated with the current segment label list"
@@ -33,8 +33,8 @@ def extractAllImages(sourceDir, targetLabels, out):
         if filename.endswith(".json"):
             segments = import_labelme.main(sourceDir+"/"+filename, labeled=True)
             if segments != {}:
-                currentLabels = segments.keys()
-
+                currentLabels = list(segments.keys())
+                currentLabels = [str(label) for label in currentLabels]
             for currentLabel in currentLabels:
                 if currentLabel in targetLabels:
                     imageFilename = filename[:-5]+'.JPG'
@@ -57,12 +57,18 @@ def extractAllImages(sourceDir, targetLabels, out):
             outfile.write(str(outputImageDict[s])+"\n")
     return uniqueOutputImages, outputImageDict
 
-# get the list of target labels
-with open(args.configFile, 'r') as stream:
+targetLabelsL = args.labels
+
+try:
+    with open(targetLabelsL[0], 'r') as stream:
         data_loaded = yaml.safe_load(stream)
-# clean it
-targetLabelsL = [str(item) for item in data_loaded['extracted_labels'].split(',')]
-targetLabelsLCleaned = [target.replace(" ", "") for target in targetLabelsL]
+    # clean it
+    targetLabelsLCleaned = data_loaded['extracted_labels']
+    targetLabelsLCleaned = [str(target) for target in targetLabelsLCleaned]
+except:
+    targetLabelsLCleaned = targetLabelsL[0].split(',')
+
+
 extractAllImages(args.sourceDir, targetLabelsLCleaned, args.out)
-print("DONEEEE!")
+
 
