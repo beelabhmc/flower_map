@@ -465,7 +465,6 @@ rule extract_images:
     shell:
         "scripts/extract_images.py {input.sourceDir} {params.labels} {output}"
         
-print(lambda wildcards: SAMP[wildcards.sample])
 rule subset_images:
     """for subsetting images following the extract_images methods"""
     input:
