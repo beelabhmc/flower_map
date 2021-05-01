@@ -76,3 +76,8 @@ A python script that transforms pixel coordinates in the original drone iamges t
 ### [watershed.py](watershed.py)
 A python script that uses the high and low confidence regions from `segment.py` in the watershed algorithm. It outputs its best guess for the location of each plant as a segments file.
 
+### [extract_images.py](extract_images.py)
+Triggered by `qsub run.bash -U out/SAMPLE/label_Images.txt`. Can also be run with command line, for example: `python3 extract_images.py /mnt/biology/donaldson/tom/flower_map/out/6217East/rev_transforms 512,517,510 /mnt/biology/donaldson/tom/flower_map/out/6217East/label_Images.txt`. A python script that takes in a string list of target segment labels to retrace and find the names of the source images used to generate those segments.
+
+### [subset_image.py](extract_images.py)
+Triggered by `qsub run.bash -U out/SAMPLE/subsetImages/subsetImagesLog.txt`. A python script that takes in the output of [extract_images.py](extract_images.py) to retrace and find the source images used to generate those segments.

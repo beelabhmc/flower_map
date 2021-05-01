@@ -76,3 +76,9 @@ out: out
 # I just have it defined here so in the future if we have parallel environment
 # we could use it
 cores: 5        # The number of cores to use for this step
+
+
+# FOR THE RULE extract_images (only uncomment if using that rule)
+# specifying the list of segment labels that you want to extract the
+# source images for
+extracted_labels: [515, 520, 571, 560]
