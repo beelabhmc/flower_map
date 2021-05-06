@@ -456,9 +456,9 @@ rule map:
 rule extract_images:
     """for recovering the source images given a set of labels from segment_map(_exp).tiff"""
     input:
-        sourceDir =  config['out']+"/{sample}/rev_transforms/",
+        sourceDir =  config['out']+"/{sample}/rev_transforms/"
     params:
-        labels =  config['extracted_labels'],
+        labels =  config['extracted_labels']
     output:
         config['out']+"/{sample}/label_Images.txt"
     conda: "envs/default.yml"
