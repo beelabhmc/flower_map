@@ -111,54 +111,43 @@ else:
     # get the true labels and add them as a column to the features df
     features = features.join(get_truth(add_ortho=False))
 
+
 featureCopy = features.copy()
 featureCopy.reset_index(inplace=True)
 print("RESETTED FEATURES")
 print(features)
 # if the balance argument is true, then balance proportion 
-# make the number of labels with
-# if args.balance:
-raw_0_df = features[features[CLASS_LABEL] == 0] 
-raw_1_df = features[features[CLASS_LABEL] == 1]
+# make the number of labels with species_class 1 the same with the number of labels with species_class 0
+# TODO: Use this argument!
+if args.balance:
+    raw_0_df = features[features[CLASS_LABEL] == 0] 
+    raw_1_df = features[features[CLASS_LABEL] == 1]
 
-image_label_list_0 = raw_0_df.index.values.tolist()
-unique_label_list_0 = list(np.unique([tup[1] for tup in image_label_list_0]))
-print(unique_label_list_0)
-num_unique_labels_0 = len(unique_label_list_0)
+    image_label_list_0 = raw_0_df.index.values.tolist()
+    unique_label_list_0 = list(np.unique([tup[1] for tup in image_label_list_0]))
+    print(unique_label_list_0)
+    num_unique_labels_0 = len(unique_label_list_0)
 
-image_label_list_1 = raw_1_df.index.values.tolist()
-unique_label_list_1 = np.unique([tup[1] for tup in image_label_list_1])
-num_unique_labels_1 = len(unique_label_list_1)
-print("nums", num_unique_labels_0, num_unique_labels_1)
-# BUG TO FIX HERE: when combining the two dfs back together, index incorrect
-if num_unique_labels_0 < num_unique_labels_1:
-    raw_1_df.reset_index(inplace=True)
-    raw_1_df = raw_1_df.rename(columns = {'level_0':'image_id'})
-    new_1_labels = random.sample(unique_label_list_1, num_unique_labels_0)
-    new_1_df = raw_1_df[raw_1_df['label'].isin(new_1_labels)]
-    new_1_df['label'] = new_1_df['label'].astype(str)
-    new_1_df['newIndex'] = new_1_df[['image_id', 'label']].agg(' '.join, axis=1)
-    del new_1_df['image_id']
-    del new_1_df['label']
-    new_0_df = new_0_df.rename(columns = {'newIndex':'label'})
-    new_0_df = new_0_df.set_index('label')
-    new_0_df = raw_0_df
-elif num_unique_labels_0 > num_unique_labels_1:
-    raw_0_df.reset_index(inplace=True)
-    raw_0_df = raw_0_df.rename(columns = {'level_0':'image_id'})
-    new_0_labels = random.sample(unique_label_list_0, num_unique_labels_1)
-    new_0_df = raw_0_df[raw_0_df['label'].isin(new_0_labels)]
-    new_0_df['label'] = new_0_df['label'].astype(str)
-    new_0_df['newIndex'] = new_0_df[['image_id', 'label']].agg(' '.join, axis=1)
-    del new_0_df['image_id']
-    del new_0_df['label']
-    new_0_df = new_0_df.rename(columns = {'newIndex':'label'})
-    new_0_df = new_0_df.set_index('label')
-    print(new_0_df)
-    new_1_df = raw_1_df
-    print(new_1_df)
+    image_label_list_1 = raw_1_df.index.values.tolist()
+    unique_label_list_1 = np.unique([tup[1] for tup in image_label_list_1])
+    num_unique_labels_1 = len(unique_label_list_1)
+    print("nums", num_unique_labels_0, num_unique_labels_1)
+    if num_unique_labels_0 < num_unique_labels_1:
+        raw_1_labels = [tup[1] for tup in image_label_list_1]
+        raw_1_df['oldLabels'] = raw_1_labels
+        new_1_labels = random.sample(unique_label_list_1, num_unique_labels_0)
+        new_1_df = raw_1_df[raw_1_df['oldLabels'].isin(new_1_labels)]
+        del new_1_df['oldLabels']
+        new_0_df = raw_0_df
+    elif num_unique_labels_0 > num_unique_labels_1:
+        raw_0_labels = [tup[1] for tup in image_label_list_0]
+        raw_0_df['oldLabels'] = raw_0_labels
+        new_0_labels = random.sample(unique_label_list_0, num_unique_labels_1)
+        new_0_df = raw_0_df[raw_0_df['oldLabels'].isin(new_0_labels)]
+        del new_0_df['oldLabels']
+        new_1_df = raw_1_df
 
-features = new_0_df.append(new_1_df)
+    features = new_0_df.append(new_1_df)
 print("NEW FEATURES!")
 print(features)
 
