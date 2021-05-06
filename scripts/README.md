@@ -19,6 +19,9 @@ An R script for creating a trained classifier. It takes as input a set of plant 
 ### [create_truth_data.py](create_truth_data.py)
 A python script that splits a set of pre-labeled segments into truth and training sets, for use by `classify_test.R` and `classify_train.R`.
 
+### [easier_train.py](easier_train.py)
+A python script **in progress** that enables more user-friendly training. This script is CURRENTLY __not__, in fact, part of the pipeline.
+
 ### [export_dem.py](export_dem.py)
 A python script that extracts the elevation of each point in an orthomosaic from a Metashape project file. Elevation values are calculated by Metashape's digital elevation model. This script is __not__, in fact, part of the pipeline.
 
@@ -30,6 +33,9 @@ A python script that converts orthomosaic pixel coordinates to geographic coordi
 
 ### [extract_features.py](extract_features.py)
 A python script for extracting machine learning features for each segmented region in a json segments file.
+
+### [extract_images.py](extract_images.py)
+Triggered by `qsub run.bash -U out/SAMPLE/label_Images.txt`. Can also be run with command line, for example: `python3 extract_images.py /mnt/biology/donaldson/tom/flower_map/out/6217East/rev_transforms 512,517,510 /mnt/biology/donaldson/tom/flower_map/out/6217East/label_Images.txt`. A python script that takes in a string list of target segment labels to retrace and find the names of the source images used to generate those segments.
 
 ### [features.py](features.py)
 A suite of python functions for calculating features. These functions are used primarily by `extract_features.py`.
@@ -64,6 +70,9 @@ A python script that creates the points of a precision-recall curve. This script
 ### [stitch.py](stitch.py)
 A python script that uses Agisoft Metashape to create an orthomosaic from a collection of overlapping drone images. The output of this script is a special Metashape project file, not the orthomosaic as a standard image file.
 
+### [subset_image.py](extract_images.py)
+Triggered by `qsub run.bash -U out/SAMPLE/subsetImages/subsetImagesLog.txt`. A python script that takes in the output of [extract_images.py](extract_images.py) to retrace and find the source images used to generate those segments.
+
 ### [test_util.py](test_util.py)
 A python script that can be useful for debugging the segmentation scripts: `segment.py` and `watershed.py`. This script is __not__, in fact, part of the pipeline.
 
@@ -72,9 +81,3 @@ A python script that transforms pixel coordinates in the original drone iamges t
 
 ### [watershed.py](watershed.py)
 A python script that uses the high and low confidence regions from `segment.py` in the watershed algorithm. It outputs its best guess for the location of each plant as a segments file.
-
-### [extract_images.py](extract_images.py)
-Triggered by `qsub run.bash -U out/SAMPLE/label_Images.txt`. Can also be run with command line, for example: `python3 extract_images.py /mnt/biology/donaldson/tom/flower_map/out/6217East/rev_transforms 512,517,510 /mnt/biology/donaldson/tom/flower_map/out/6217East/label_Images.txt`. A python script that takes in a string list of target segment labels to retrace and find the names of the source images used to generate those segments.
-
-### [subset_image.py](extract_images.py)
-Triggered by `qsub run.bash -U out/SAMPLE/subsetImages/subsetImagesLog.txt`. A python script that takes in the output of [extract_images.py](extract_images.py) to retrace and find the source images used to generate those segments.
