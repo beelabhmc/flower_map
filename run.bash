@@ -46,10 +46,10 @@ fi
 
 # check: are we being executed from within qsub?
 if [ "$ENVIRONMENT" = "BATCH" ]; then
+	# if we have parallel environment in the future, we could use the following for --cluster:
+	# --cluster "qsub -pe [NAME OF THE PARALLEL ENV] {threads} -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
 	snakemake \
 	--cluster "qsub -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
-	# if we have parallel environment in the future, we could do the following instead: 
-	# --cluster "qsub -pe [NAME OF THE PARALLEL ENV] {threads} -t 1 -V -S /bin/bash -j y -cwd -o $out_path/qlog" \
 	--config out="$out_path" \
 	--latency-wait 60 \
 	--use-conda \
