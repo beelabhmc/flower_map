@@ -70,14 +70,6 @@ model: data/models/test-all-exp.rda
 # Defaults to 'out' if not provided
 out: out
 
-# specifying the number of cores used to process each dataset
-# TODO: note that this wouldn't work yet - we need to have parallel environments defined
-# in purves first before we can use snakemake's multithread feature
-# I just have it defined here so in the future if we have parallel environment
-# we could use it
-cores: 5        # The number of cores to use for this step
-
-
 # FOR THE RULE extract_images (only uncomment if using that rule)
 # specifying the list of segment labels that you want to extract the
 # source images for
