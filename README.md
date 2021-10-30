@@ -1,4 +1,4 @@
-[![Snakemake](https://img.shields.io/badge/snakemake-≥5.18.0-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥5.20.1-brightgreen.svg?style=flat-square)](https://snakemake.bitbucket.io)
 [![License](https://img.shields.io/apm/l/vim-mode.svg)](LICENSE)
 
 # flower_map
@@ -71,4 +71,4 @@ An example bash script for executing the pipeline using `snakemake` and `conda`.
     These slides can be helpful if you want a broad overview of how the method works.
 3. [ESA Conference Poster](https://drive.google.com/uc?export=download&id=1esQWCZAeV6C7Y5LKXDELlHBEMBmeHaA6)
 
-    This poster describes the performance of our method after a major revision to parallelize the segmentation step. See [PR #6](/pull/6) for details about the revision.
+    This poster describes the performance of our method after a major revision to parallelize the segmentation step. See [PR #6](https://github.com/beelabhmc/flower_map/pull/6) for details about the revision.
