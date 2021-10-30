@@ -61,3 +61,14 @@ Various scripts used by the pipeline. See the [script README](scripts/README.md)
 
 ### [run.bash](run.bash)
 An example bash script for executing the pipeline using `snakemake` and `conda`. Any arguments to this script are passed directly to `snakemake`.
+
+# communications
+1. [Thesis Manuscript](https://scholar.google.com/citations?view_op=view_citation&hl=en&user=6iMJCn0AAAAJ&citation_for_view=6iMJCn0AAAAJ:u-x6o8ySG0sC)
+
+    Check out our manuscript if you're interested in how the method performed on our data.
+2. [Socal Animal Behavior Talk](https://drive.google.com/uc?export=download&id=1eRfbXQf6hF5KsSne43bRyd7DVkIsbbmf)
+
+    These slides can be helpful if you want a broad overview of how the method works.
+3. [ESA Conference Poster](https://drive.google.com/uc?export=download&id=1esQWCZAeV6C7Y5LKXDELlHBEMBmeHaA6)
+
+    This poster describes the performance of our method after a major revision to parallelize the segmentation step. See [PR #6](/pull/6) for details about the revision.
